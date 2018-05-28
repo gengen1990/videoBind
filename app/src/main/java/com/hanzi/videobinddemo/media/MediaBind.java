@@ -35,7 +35,6 @@ public class MediaBind {
     private AudioComposer bgmComposer, audioComposer;
 
     private AudioMix audioMix;
-    private MediaFileMuxer mediaFileMuxer;
     private MediaCombine mediaCombine;
 
 
@@ -44,13 +43,16 @@ public class MediaBind {
     private String finalOutFilePath = PATH + "/1/out.mp4";
     private String bgmOutFilePath = PATH + "/1/bgm.aac";
     private String audioOutFilePath = PATH + "/1/audio.aac";
+    private String audioMixFilePath = PATH + "/1/audioMix.aac";
     private String videoOutFilePath = PATH + "/1/video.mp4";
 
-    private boolean[] indexOk = new boolean[] {false,false};
+    private boolean[] indexPcmMixOk = new boolean[]{false, false};
     private String[] pcmMixPath = new String[2];
 
-    private Handler audioMixHandler ;
-    private HandlerThread audioMixHandlerThread ;
+    private boolean[] indexVideoAudioOk = new boolean[]{false, false};
+
+    private Handler audioMixHandler;
+    private HandlerThread audioMixHandlerThread;
 
     private MediaBindInfo mediaBindInfo;
 
@@ -66,15 +68,20 @@ public class MediaBind {
         initBgmComposer(bindInfo);
         initMediaAudioMix();
         initMediaFileMuxer();
+        initMediaCombine();
         return 0;
     }
 
-    private void initMediaAudioMix() {
-        audioMixHandlerThread= new HandlerThread("audioMix");
-        audioMixHandlerThread.start();
-        audioMixHandler=new Handler(audioMixHandlerThread.getLooper());
+    private void initMediaCombine() {
+        mediaCombine = new MediaCombine();
+    }
 
-        audioMix= new AudioMix();
+    private void initMediaAudioMix() {
+        audioMixHandlerThread = new HandlerThread("audioMix");
+        audioMixHandlerThread.start();
+        audioMixHandler = new Handler(audioMixHandlerThread.getLooper());
+
+        audioMix = new AudioMix();
     }
 
     public int start() {
@@ -90,7 +97,7 @@ public class MediaBind {
 
         } else {
             audioSampleRate = audioComposer.getMinSampleRate();
-            audioComposer.start(audioSampleRate, 2,false);
+            audioComposer.start(audioSampleRate, 2, false);
         }
 
 
@@ -98,9 +105,15 @@ public class MediaBind {
             @Override
             public void run() {
                 while (true) {
-                    if (indexOk [0] && indexOk[1]){
-                        audioMix.open(pcmMixPath,audioOutFilePath,audioComposer.getMinSampleRate(),audioComposer.getChannelCount(),audioComposer.getMaxInputSize());
+                    if (indexPcmMixOk[0] && indexPcmMixOk[1]) {
+                        audioMix.open(pcmMixPath, audioMixFilePath, audioComposer.getMinSampleRate(), audioComposer.getChannelCount(), audioComposer.getMaxInputSize());
                         audioMix.start();
+                        audioMix.setOnFinishListener(new AudioMix.FinishListener() {
+                            @Override
+                            public void onFinish() {
+                                indexVideoAudioOk[0] = true;
+                            }
+                        });
                     }
 
                 }
@@ -109,6 +122,14 @@ public class MediaBind {
 
         videoComposer.start();
 
+        while (indexVideoAudioOk[0] && indexVideoAudioOk[1]) {
+            mediaCombine.open(videoOutFilePath, audioOutFilePath, finalOutFilePath, new MediaCombine.CombineVideoListener() {
+                @Override
+                public void onProgress(int progress) {
+
+                }
+            });
+        }
         return 0;
     }
 
@@ -116,6 +137,7 @@ public class MediaBind {
         audioComposer.stop();
         bgmComposer.stop();
         audioMix.stop();
+        mediaCombine.stop();
         return 0;
     }
 
@@ -128,13 +150,13 @@ public class MediaBind {
         audioComposer.setAudioComposerCallBack(new AudioComposer.AudioComposerCallBack() {
             @Override
             public void onPcmPath(String path) {
-                indexOk[0]=true;
+                indexPcmMixOk[0] = true;
                 pcmMixPath[0] = path;
             }
 
             @Override
-            public void onAccPath(String path) {
-
+            public void onFinishWithoutMix() {
+                indexVideoAudioOk[0] = true;
             }
         });
     }
@@ -148,14 +170,14 @@ public class MediaBind {
                 videoOutFilePath);
         videoComposer.setVideoComposerCallBack(new VideoComposer.VideoComposerCallBack() {
             @Override
-            public void onh264Path(String path) {
-
+            public void onh264Path() {
+                indexVideoAudioOk[1] = true;
             }
         });
     }
 
     private void initBgmComposer(MediaBindInfo info) {
-        if (info.getBgm()==null)return;
+        if (info.getBgm() == null) return;
         long mDuration = info.getDuration();
         MediaBean bgm = info.getBgm();
 
@@ -171,12 +193,12 @@ public class MediaBind {
         bgmComposer.setAudioComposerCallBack(new AudioComposer.AudioComposerCallBack() {
             @Override
             public void onPcmPath(String path) {
-                indexOk[1]=true;
+                indexPcmMixOk[1] = true;
                 pcmMixPath[1] = path;
             }
 
             @Override
-            public void onAccPath(String path) {
+            public void onFinish(String path) {
 
             }
         });

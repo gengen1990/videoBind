@@ -86,13 +86,15 @@ public class VideoComposer {
             @Override
             public void run() {
                 startVideoEdit();//还没有完善，暂时每一个视频都进行编码解码的操作吧
-                isEditOk();
+                if (isEditOk()) {
+                    videoComposerCallBack.onh264Path();
+                }
 //                startMerge();
             }
         });
     }
 
-    private void isEditOk() {
+    private boolean isEditOk() {
         boolean isEditOk = false;
         while ((!isEditOk)&&(!beStop)){
             int i = 0;
@@ -106,6 +108,7 @@ public class VideoComposer {
                 isEditOk = true;
             }
         }
+        return isEditOk;
     }
 
     public void stop() {
@@ -293,6 +296,6 @@ public class VideoComposer {
 
 
     public interface VideoComposerCallBack {
-        public void onh264Path(String path);
+        public void onh264Path();
     }
 }

@@ -180,7 +180,7 @@ public class AudioComposer {
         }
         stop();
         if (audioComposerCallBack != null)
-            audioComposerCallBack.onAccPath(outFilePath);
+            audioComposerCallBack.onFinishWithoutMix();
     }
 
     /**
@@ -609,7 +609,7 @@ public class AudioComposer {
     public interface AudioComposerCallBack {
         public void onPcmPath(String path);
 
-        public void onAccPath(String path);
+        public void onFinishWithoutMix();
     }
 
 }

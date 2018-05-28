@@ -38,6 +38,8 @@ public class AudioMix {
     private FileOutputStream fos;
     private BufferedOutputStream bos;
 
+    private FinishListener finishListener;
+
     public int open(String[] inPcmPaths, String outAACPath, int sampleRate, int channelCount, int maxInputSize) {
         this.inPcmPaths = inPcmPaths;
         this.outAACPath = outAACPath;
@@ -65,7 +67,6 @@ public class AudioMix {
     }
 
     public int start() {
-
         try {
             pcmMix(inPcmFiles, outAACPath, 1, 1, sampleRate);
             encoderHandler.post(audioMixEncodeInputRunnable);
@@ -75,7 +76,7 @@ public class AudioMix {
         return 0;
     }
 
-    public int stop(){
+    public int stop() {
         audioEncoder.stop();
         return 0;
     }
@@ -83,13 +84,13 @@ public class AudioMix {
     private Runnable audioMixEncodeInputRunnable = new Runnable() {
         @Override
         public void run() {
-            isEncoding =true;
+            isEncoding = true;
             while (!byteContainer.isEmpty() || isEncoding) {
-                audioEncoder.encode(byteContainer.getData(),false);
+                audioEncoder.encode(byteContainer.getData(), false);
             }
 
             if (!isEncoding) {
-                audioEncoder.encode(null,true);
+                audioEncoder.encode(null, true);
             }
         }
     };
@@ -98,7 +99,7 @@ public class AudioMix {
      * 音频混合
      */
     private void pcmMix(File[] rawAudioFiles, final String outFile, int firstVol,
-                       int secondVol, final int sampleRate) throws IOException {
+                        int secondVol, final int sampleRate) throws IOException {
         File file = new File(outFile);
         if (file.exists()) {
             file.delete();
@@ -193,14 +194,14 @@ public class AudioMix {
 //                byteBuffer.flip();
 
 //                byteBuffer.get(datas);
-               //添加头信息
+                //添加头信息
                 int outBitSize = bufferInfo.size;
-                int outPacketSize = outBitSize+7;//头文件长度为7
+                int outPacketSize = outBitSize + 7;//头文件长度为7
                 byteBuffer.position(bufferInfo.offset);
-                byteBuffer.limit(bufferInfo.offset+outBitSize);
+                byteBuffer.limit(bufferInfo.offset + outBitSize);
                 byte[] chunkAudio = new byte[outPacketSize];
-                addADTStoPacket(chunkAudio,outPacketSize);
-                byteBuffer.get(chunkAudio,7,outBitSize);
+                addADTStoPacket(chunkAudio, outPacketSize);
+                byteBuffer.get(chunkAudio, 7, outBitSize);
                 byteBuffer.position(bufferInfo.offset);
 
                 try {
@@ -215,6 +216,8 @@ public class AudioMix {
             public void encodeOver() {
                 try {
                     fos.close();
+                    if (finishListener != null)
+                        finishListener.onFinish();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -239,4 +242,11 @@ public class AudioMix {
         packet[6] = (byte) 0xFC;
     }
 
+    public void setOnFinishListener(FinishListener finishListener) {
+        this.finishListener = finishListener;
+    }
+
+    public interface FinishListener {
+        public void onFinish();
+    }
 }
