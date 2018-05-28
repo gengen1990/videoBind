@@ -75,6 +75,11 @@ public class AudioMix {
         return 0;
     }
 
+    public int stop(){
+        audioEncoder.stop();
+        return 0;
+    }
+
     private Runnable audioMixEncodeInputRunnable = new Runnable() {
         @Override
         public void run() {
@@ -92,7 +97,7 @@ public class AudioMix {
     /**
      * 音频混合
      */
-    public void pcmMix(File[] rawAudioFiles, final String outFile, int firstVol,
+    private void pcmMix(File[] rawAudioFiles, final String outFile, int firstVol,
                        int secondVol, final int sampleRate) throws IOException {
         File file = new File(outFile);
         if (file.exists()) {

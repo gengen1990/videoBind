@@ -52,18 +52,20 @@ public class MediaBind {
     private Handler audioMixHandler ;
     private HandlerThread audioMixHandlerThread ;
 
+    private MediaBindInfo mediaBindInfo;
+
 
     public MediaBind(int processStragey) {
         this.processStragey = processStragey;
     }
 
     public int open(MediaBindInfo bindInfo) {
+        this.mediaBindInfo = bindInfo;
         initVideoComposer(bindInfo);
         initAudioComposer(bindInfo);
         initBgmComposer(bindInfo);
         initMediaAudioMix();
         initMediaFileMuxer();
-
         return 0;
     }
 
@@ -97,13 +99,15 @@ public class MediaBind {
             public void run() {
                 while (true) {
                     if (indexOk [0] && indexOk[1]){
-
+                        audioMix.open(pcmMixPath,audioOutFilePath,audioComposer.getMinSampleRate(),audioComposer.getChannelCount(),audioComposer.getMaxInputSize());
+                        audioMix.start();
                     }
 
                 }
             }
         });
 
+        videoComposer.start();
 
         return 0;
     }
@@ -111,6 +115,7 @@ public class MediaBind {
     public int stop() {
         audioComposer.stop();
         bgmComposer.stop();
+        audioMix.stop();
         return 0;
     }
 
@@ -136,13 +141,17 @@ public class MediaBind {
 
     private void initVideoComposer(MediaBindInfo bindInfo) {
         videoComposer = new VideoComposer(bindInfo.getMediaBeans(),
-                bindInfo.getEffectInfos(),
                 bindInfo.getFilter(),
                 bindInfo.getDuration(),
-                bindInfo.getRate(),
                 bindInfo.getOutputWidth(),
                 bindInfo.getOutputHeight(),
                 videoOutFilePath);
+        videoComposer.setVideoComposerCallBack(new VideoComposer.VideoComposerCallBack() {
+            @Override
+            public void onh264Path(String path) {
+
+            }
+        });
     }
 
     private void initBgmComposer(MediaBindInfo info) {

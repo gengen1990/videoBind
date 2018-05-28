@@ -8,11 +8,12 @@ import android.graphics.Rect;
 import android.os.Environment;
 import android.util.Log;
 
-import com.hanzi.videobinddemo.bean.EffectInfo;
+import com.hanzi.videobinddemo.media.Variable.MediaBean;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.util.List;
 
 /**
  * Create by xjs
@@ -24,17 +25,17 @@ public class BitmapUtils {
     /**
      * 多张bitmap叠加
      *
-     * @param info
+     * @param infos
      * @param width
      * @param height
      * @return
      */
-    public static Bitmap bitmapMix(Context context, EffectInfo info, int width, int height) {
+    public static Bitmap bitmapMix(Context context, List<MediaBean.EffectInfo> infos, int width, int height) {
         boolean isDisplay = false;
 
         Bitmap out = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(out);
-        for (EffectInfo.ListBean data : info.data) {
+        for (MediaBean.EffectInfo data : infos) {
             Log.d(TAG, "bitmapMix: data.id:"+data.id+" data.effectPos:"+data.effectPos);
             if (data.effectPos > -1) {
                 isDisplay = true;

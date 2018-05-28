@@ -137,7 +137,7 @@ public class AudioDecoder {
                     break;
                 }
             }
-            Log.i(TAG, "video hardware decoder output thread exit!");
+            Log.i(TAG, "audio hardware decoder output thread exit!");
         }
     }
 

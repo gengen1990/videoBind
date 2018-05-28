@@ -20,12 +20,12 @@ import android.opengl.EGL14;
 import android.util.Log;
 import android.view.Surface;
 
-import com.hanzi.videobinddemo.bean.EffectInfo;
 import com.hanzi.videobinddemo.bean.VideoInfo;
 import com.hanzi.videobinddemo.core.MyApplication;
 import com.hanzi.videobinddemo.drawer.VideoDrawer;
 import com.hanzi.videobinddemo.filter.AFilter;
 import com.hanzi.videobinddemo.filter.BlendingFilter;
+import com.hanzi.videobinddemo.media.Variable.MediaBean;
 
 import javax.microedition.khronos.egl.EGL10;
 import javax.microedition.khronos.egl.EGLConfig;
@@ -48,7 +48,7 @@ import javax.microedition.khronos.egl.EGLSurface;
  * By default, the Surface will be using a BufferQueue in asynchronous mode, so we
  * can potentially drop frames.
  */
-class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
+public class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
     private static final String TAG = "OutputSurface";
     private static final boolean VERBOSE = false;
     private static final int EGL_OPENGL_ES2_BIT = 4;
@@ -62,37 +62,39 @@ class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
     private boolean mFrameAvailable;
     //    private TextureRender mTextureRender;
     private VideoDrawer mDrawer;
-
+    private MediaBean mMediaBean;
+    private AFilter mFilter;
     /**
      * Creates an OutputSurface using the current EGL context.  Creates a Surface that can be
      * passed to MediaCodec.configure().
      */
-    public OutputSurface(VideoInfo info, EffectInfo effectInfo) {
-        if (info.width <= 0 || info.height <= 0) {
-            throw new IllegalArgumentException();
-        }
-        setup(info, effectInfo);
+    public OutputSurface(MediaBean mediaBean, AFilter filter) {
+       this.mMediaBean = mediaBean;
+       this.mFilter =filter;
+        setup();
+
     }
 
     /**
      * Creates instances of TextureRender and SurfaceTexture, and a Surface associated
      * with the SurfaceTexture.
      */
-    private void setup(VideoInfo info, EffectInfo effectInfo) {
+    private void setup() {
 //        mTextureRender = new TextureRender(info);
 //        mTextureRender.surfaceCreated();
 
         mDrawer = new VideoDrawer(MyApplication.getContext(), MyApplication.getContext().getResources(), true);
         mDrawer.onSurfaceCreated(null, null);
-        if (effectInfo != null) {
-            if (effectInfo.filter instanceof BlendingFilter) {
-                ((BlendingFilter) effectInfo.filter).setBinding(true);
-                ((BlendingFilter) effectInfo.filter).releaseTextures();
+        mDrawer.setMediaBean(mMediaBean);
+        if (mFilter != null) {
+            if (mFilter instanceof BlendingFilter) {
+                ((BlendingFilter) mFilter).setBinding(true);
+                ((BlendingFilter) mFilter).releaseTextures();
                 Log.d(TAG, "setup: blendingFilter");
             }
-            mDrawer.setFilter(effectInfo.filter);
+            mDrawer.setFilter(mFilter);
         }
-        mDrawer.onSurfaceChanged(null, info.width, info.height);
+        mDrawer.onSurfaceChanged(null, mMediaBean.getVideoWidth(), mMediaBean.getVideoHeight());
 
         // Even if we don't access the SurfaceTexture after the constructor returns, we
         // still need to keep a reference to it.  The Surface doesn't retain a reference
@@ -274,17 +276,16 @@ class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
     /**
      * Draws the data from SurfaceTexture onto the current EGL surface.
      *
-     * @param effectInfo
      */
-    public void drawImage(EffectInfo effectInfo) {
+    public void drawImage() {
 //        mTextureRender.drawFrame(mSurfaceTexture);
-        mDrawer.addVideoInfo(effectInfo);
+
 
         mDrawer.onDrawFrame(null);
     }
 
-    public void setFilter(AFilter filter) {
-        mDrawer.setFilter(filter);
+    public void setmFilter(AFilter mFilter) {
+        mDrawer.setFilter(mFilter);
     }
 
     @Override

@@ -9,7 +9,6 @@ import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.util.Log;
 
-import com.hanzi.videobinddemo.bean.EffectInfo;
 import com.hanzi.videobinddemo.bean.VideoInfo;
 import com.hanzi.videobinddemo.filter.AFilter;
 import com.hanzi.videobinddemo.filter.EffectFilter;
@@ -17,6 +16,7 @@ import com.hanzi.videobinddemo.filter.GroupFilter;
 import com.hanzi.videobinddemo.filter.NoFilter;
 import com.hanzi.videobinddemo.filter.ProcessFilter;
 import com.hanzi.videobinddemo.filter.RotationOESFilter;
+import com.hanzi.videobinddemo.media.Variable.MediaBean;
 import com.hanzi.videobinddemo.utils.BitmapUtils;
 import com.hanzi.videobinddemo.utils.EasyGlUtils;
 import com.hanzi.videobinddemo.utils.MatrixUtils;
@@ -102,7 +102,7 @@ public class VideoDrawer implements GLSurfaceView.Renderer {
      */
     private EffectFilter effectFilter;
     private Context context;
-    private EffectInfo info;
+    private MediaBean info;
 
     private boolean isBinding = false;
     private List<Integer> list = new ArrayList<>();
@@ -240,60 +240,31 @@ public class VideoDrawer implements GLSurfaceView.Renderer {
 
     private void bindImage() {
         if (info != null) {
-
-            if (info.videoView != null && info.videoView.isPlaying()) {    //预览视频数据
-                int time = info.videoView.getCurrentPosition();
-//                for (int i = 0; i < info.data.size(); i++) {
-//                    EffectInfo.ListBean data = info.data.get(i);
-//                    data.effectPos = data.effectPos >= data.bitmaps.size() - 1 ? data.bitmaps.size() - 1 : data.effectPos;
-//                    data.videoLastTime = info.videoView.getLocalCurrentDuration() - data.videoLastTime < data.interval ? 0 : data.videoLastTime;
-//                    if (data.effectStartTime < time && time < data.effectEndTime) {
-//                        if (data.videoLastTime == 0) { //第一帧
-//                            data.effectPos = 0;
-//                            data.videoLastTime = time;
-//                        } else if ((time - data.videoLastTime) > data.interval) {
-//                            if (data.effectPos == data.bitmaps.size() - 1) {
-//                                data.effectPos = 0;
-//                            } else {
-//                                data.effectPos = data.effectPos + 1;
-//                            }
-//                            data.videoLastTime = time;
-//                            data.videoFrameList.add(framePosition);
-//                        } else if (info.duration != 0 && (info.duration - time) <= data.interval) {
-//                            data.videoLastTime = 0;
-//                        }
-//                    } else {
-//                        info.data.get(i).effectPos = -1;  //取消特效
-//                        data.videoLastTime = 0;
-//                        //effectPos = 0;  //重置位置
-//                    }
-//                }
-            } else {   //生成视频数据
                 //判断整个视频的第几帧需要添加effect
-                for (int i = 0; i < info.data.size(); i++) {
-                    EffectInfo.ListBean listBean = info.data.get(i);
-                    if (listBean.mf == 0) {
-                        listBean.mf = (info.rate == 0 ? 15 : info.rate) * listBean.interval / 1000;
+            List<MediaBean.EffectInfo> effectInfos= info.getEffectInfos();
+                for (int i = 0; i < effectInfos.size(); i++) {
+                    MediaBean.EffectInfo effectInfo = effectInfos.get(i);
+                    if (effectInfo.mf == 0) {
+                        effectInfo.mf = (info.getRate() == 0 ? 15 : info.getRate()) * effectInfo.interval / 1000;
                     }
-                    if (listBean.videoFrameList.size() > 0
-                            && framePosition >= listBean.videoFrameList.get(0)
-                            && framePosition <= listBean.videoFrameList.get(listBean.videoFrameList.size() - 1)) {
-                        if (listBean.mfCount >= listBean.mf) {
-                            if (listBean.effectPos == listBean.bitmaps.size() - 1) {
-                                listBean.effectPos = 0;
+                    if (effectInfo.videoFrameList.size() > 0
+                            && framePosition >= effectInfo.videoFrameList.get(0)
+                            && framePosition <= effectInfo.videoFrameList.get(effectInfo.videoFrameList.size() - 1)) {
+                        if (effectInfo.mfCount >= effectInfo.mf) {
+                            if (effectInfo.effectPos == effectInfo.bitmaps.size() - 1) {
+                                effectInfo.effectPos = 0;
                             } else {
-                                listBean.effectPos = listBean.effectPos + 1;
+                                effectInfo.effectPos = effectInfo.effectPos + 1;
                             }
-                            listBean.mfCount = 1;
+                            effectInfo.mfCount = 1;
                         } else {
-                            ++listBean.mfCount;
+                            ++effectInfo.mfCount;
                         }
                     } else {
-                        listBean.effectPos = -1;
+                        effectInfo.effectPos = -1;
                     }
-                }
             }
-            Bitmap bitmap = BitmapUtils.bitmapMix(context, info, viewWidth, viewHeight);  //无数据，返回null
+            Bitmap bitmap = BitmapUtils.bitmapMix(context, effectInfos, viewWidth, viewHeight);  //无数据，返回null
             effectFilter.setBitmap(bitmap);
             effectFilter.setPosition(0, 0, viewWidth, viewHeight);
             effectFilter.setMatrix(OM);
@@ -319,7 +290,7 @@ public class VideoDrawer implements GLSurfaceView.Renderer {
     /**
      * 切换开启beauty效果
      */
-    public void addVideoInfo(EffectInfo info) {
+    public void setMediaBean(MediaBean info) {
         this.info = info;
     }
 
