@@ -13,7 +13,7 @@ import java.nio.ByteBuffer;
  */
 
 public class AudioEncoder {
-    private final static String TAG = "AudioEncoder";
+    private String TAG = "AudioEncoder";
     private MediaCodec encoder;
     final int TIMEOUT_USEC = -1;
 
@@ -30,7 +30,7 @@ public class AudioEncoder {
 
     private boolean mRunning = false;
 
-    public int open(String encodeType, int sampleRate, int channelCount, int bitRate, int inputSize, AudioEncoderCallBack audioEncoderCallback) {
+    public int open(String tag, String encodeType, int sampleRate, int channelCount, int bitRate, int inputSize, AudioEncoderCallBack audioEncoderCallback) {
         try {
             MediaFormat encodeFormat = MediaFormat.createAudioFormat(encodeType, sampleRate, channelCount);//mime type 采样率 声道数
             encodeFormat.setInteger(MediaFormat.KEY_BIT_RATE, bitRate);//比特率
@@ -46,6 +46,7 @@ public class AudioEncoder {
                             "sampleRate %d, channelCount %s, bitRate %s,inputSize %d"
                     , sampleRate, channelCount, bitRate, inputSize));
 
+            this.TAG = tag;
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -65,8 +66,9 @@ public class AudioEncoder {
     }
 
     public boolean encode(byte[] chunkPCM, boolean endOfStream) {
-        int index = encoder.dequeueInputBuffer(TIMEOUT_USEC);
 
+        Log.d(TAG, "encode: ");
+        int index = encoder.dequeueInputBuffer(TIMEOUT_USEC);
 
         Log.d(TAG, "encode: index:" + index);
 
@@ -80,15 +82,14 @@ public class AudioEncoder {
                 return false;
             }
 
-            int length = 0;
-            if (chunkPCM != null) {
-                length = chunkPCM.length;
+//            if (chunkPCM == null) {
+//                Log.d(TAG, "encode: null");
+////                length = chunkPCM.length;
+//                return true;
+//            }
+//            Log.d(TAG, String.format("AudioEncoder encode" +
+//                    "chunkPCM length %d, endOfStream %b", length, endOfStream));
 
-            }
-            Log.d(TAG, String.format("AudioEncoder encode" +
-                    "chunkPCM length %d, endOfStream %b", length, endOfStream));
-
-            Log.d(TAG, "encode: ");
 //                if (inputInfo.size < 4096) {//这里看起来应该是16位单声道转16位双声道
 //                    //说明是单声道的,需要转换一下
 //                    byte[] stereoBytes = new byte[inputInfo.size * 2];
@@ -104,6 +105,7 @@ public class AudioEncoder {
 //                    Log.d(TAG, String.format("inputInfo.size < 4096"));
 //
 //                } else {
+
             inputBuffer.position(0).limit(chunkPCM.length);
             inputBuffer.put(chunkPCM);
             inputBuffer.flip();
@@ -120,22 +122,26 @@ public class AudioEncoder {
     public int stop() {
         stopEncoder();
         stopThread();
+        if (encoder != null) {
+            encoder.stop();
+            encoder.release();
+        }
         return 0;
     }
 
     private void stopThread() {
+//        mRunning = false;
         if (mOutputThread != null) {
             try {
+                Log.d(TAG, "stopThread: before");
                 mOutputThread.join();
+                Log.d(TAG, "stopThread: after");
             } catch (Exception e) {
                 Log.e(TAG, "output thread join failed:" + e);
             }
             mOutputThread = null;
         }
-        if (encoder!=null) {
-            encoder.stop();
-            encoder.release();
-        }
+
     }
 
     private int stopEncoder() {
@@ -167,28 +173,29 @@ public class AudioEncoder {
                 try {
 
                     MediaCodec.BufferInfo outputInfo = new MediaCodec.BufferInfo();
-                    int index = encoder.dequeueOutputBuffer(outputInfo, 10000);
+                    int index = encoder.dequeueOutputBuffer(outputInfo, 1000);
+                    Log.d(TAG, "dequeueOutputBuffer: index:"+index);
 
-//                    Log.d(TAG, "run: index:"+index);
                     if (index == MediaCodec.INFO_TRY_AGAIN_LATER) {
 //                        mRunning = false;
-//                        Log.d(TAG, "run: INFO_TRY_AGAIN_LATER");
+                        Log.d(TAG, "run: INFO_TRY_AGAIN_LATER");
                     } else if (index == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
                         outputBuffers = encoder.getOutputBuffers();
+                        Log.d(TAG, "run: INFO_OUTPUT_BUFFERS_CHANGED");
                     } else if (index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                         MediaFormat newFormat = encoder.getOutputFormat();
                         Log.d(TAG, "run: newFormat:" + newFormat.toString());
                     } else if (index < 0) {
-
+                        Log.d(TAG, "run: index:"+index);
                     } else {
 
                         ByteBuffer outputData = outputBuffers[index];
                         boolean done = (outputInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0;
                         if (done) {
+                            Log.d(TAG, "run: BUFFER_FLAG_END_OF_STREAM:" +  done);
                             mRunning = false;
-
-                            audioEncoderCallback.encodeOver();
-                            Log.d(TAG, "run: done:" + done);
+                            if (audioEncoderCallback!=null)
+                                audioEncoderCallback.encodeOver();
                         }
 
 
@@ -197,10 +204,11 @@ public class AudioEncoder {
 //                            Log.d(TAG, "run: CEncoderRunnable:continue");
 //                            continue;
 //                        }
+                        Log.d(TAG, "run: outputInfo.size:"+outputInfo.size);
 
                         if (outputInfo.size != 0 && outputInfo.presentationTimeUs > 0) {
-                            Log.d(TAG, "run: lastStamp:" + lastStamp);
-                            Log.d(TAG, String.format("run: index %d size %d presentationTimeUs:%d", index, outputInfo.size, outputInfo.presentationTimeUs));
+                            Log.d(TAG, "run: outputData.limit():" + outputData.limit());
+//                            Log.d(TAG, String.format("output: index %d size %d presentationTimeUs:%d", index, outputInfo.size, outputInfo.presentationTimeUs));
 //                            if (outputInfo.presentationTimeUs > lastStamp) {//为了避免有问题的数据
                             byte[] data = new byte[outputData.limit()];
                             outputData.get(data);
@@ -217,8 +225,9 @@ public class AudioEncoder {
                     break;
                 }
             }
-            stopEncoder();
-            Log.i(TAG, "video hardware decoder output thread exit!");
+//            stopThread();
+
+            Log.d(TAG, "video hardware decoder output thread exit!");
         }
     }
 

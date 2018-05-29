@@ -48,7 +48,7 @@ public class MediaBind {
     private String videoOutFilePath = PATH + "/1/video.mp4";
 
     private boolean[] indexPcmMixOk = new boolean[]{false, false};
-    private String[] pcmMixPath = new String[2];
+    private String[] pcmMixPaths = new String[2];
 
     private boolean[] indexVideoAudioOk = new boolean[]{false, false};
 
@@ -74,7 +74,6 @@ public class MediaBind {
     }
 
     public int start() {
-
         startAudio();
 
 //        startVideo();
@@ -110,12 +109,13 @@ public class MediaBind {
     }
 
     private void initAudioComposer(MediaBindInfo bindInfo) {
-        audioComposer = new AudioComposer(bindInfo.getMediaBeans(), bindInfo.getDuration(), audioOutFilePath, false);
+        audioComposer = new AudioComposer("audioComposer",bindInfo.getMediaBeans(), bindInfo.getDuration(), audioOutFilePath, false);
         audioComposer.setAudioComposerCallBack(new AudioComposer.AudioComposerCallBack() {
             @Override
             public void onPcmPath(String path) {
                 indexPcmMixOk[0] = true;
-                pcmMixPath[0] = path;
+                pcmMixPaths[0] = path;
+                Log.d(TAG, "onPcmPath: 0");
             }
 
             @Override
@@ -141,7 +141,8 @@ public class MediaBind {
 
     private void initBgmComposer(MediaBindInfo info) {
         if (info.getBgm() == null) return;
-        long mDuration = videoComposer.getDurationUs();
+        long mDuration = audioComposer.getDurationUs();
+        Log.d(TAG, "initBgmComposer: mDuration:"+mDuration);
         MediaBean bgm = info.getBgm();
 
         if (mDuration <= 0) {
@@ -152,12 +153,13 @@ public class MediaBind {
         List<MediaBean> mediaBeans = new ArrayList<>();
         setMediaBeansCount(mDuration, bgm, mediaBeans);
 
-        bgmComposer = new AudioComposer(mediaBeans, mDuration, bgmOutFilePath, true);
+        bgmComposer = new AudioComposer("bgmComposer",mediaBeans, mDuration, bgmOutFilePath, true);
         bgmComposer.setAudioComposerCallBack(new AudioComposer.AudioComposerCallBack() {
             @Override
             public void onPcmPath(String path) {
                 indexPcmMixOk[1] = true;
-                pcmMixPath[1] = path;
+                pcmMixPaths[1] = path;
+                Log.d(TAG, "onPcmPath: 1");
             }
 
             @Override
@@ -174,7 +176,7 @@ public class MediaBind {
             audioSampleRate = audioComposer.getMinSampleRate() > bgmComposer.getMinSampleRate() ?
                     bgmComposer.getMinSampleRate() : audioComposer.getMinSampleRate();
 
-            Log.d(TAG, "start: audioSampleRate:" + audioSampleRate);
+            Log.d(TAG, "start: audioSampleRate bgm:" + audioSampleRate);
             audioComposer.start(audioSampleRate, 2, true);
             bgmComposer.start(audioSampleRate, 2, true);
 
@@ -187,19 +189,22 @@ public class MediaBind {
 
         audioMixHandler.post(new Runnable() {
             @Override
-            public void run() {
+            public void run() { 
                 while (true) {
                     if (indexPcmMixOk[0] && indexPcmMixOk[1]) {
-                        audioMix.open(pcmMixPath, audioMixFilePath, audioComposer.getMinSampleRate(), audioComposer.getChannelCount(), audioComposer.getMaxInputSize());
+                        Log.d(TAG, "run: audioMix");
+                        audioMix.open(pcmMixPaths, audioMixFilePath,audioComposer.getFormat(), audioComposer.getMinSampleRate(), audioComposer.getChannelCount(), audioComposer.getMaxInputSize());
                         audioMix.start();
                         audioMix.setOnFinishListener(new AudioMix.FinishListener() {
                             @Override
                             public void onFinish() {
                                 indexVideoAudioOk[0] = true;
+                                Log.d(TAG, "onFinish: ");
                             }
                         });
+                        Log.d(TAG, "audioMixHandler: break");
+                        break;
                     }
-
                 }
             }
         });
@@ -224,13 +229,14 @@ public class MediaBind {
         long endTime;
         try {
 
-            int count = 2;//(int) (mDuration / bgm.getDuration());
+            int count = 3;//(int) (mDuration / bgm.getDuration());
             for (int i = 0; i < count; i++) {
                 mediaBeans.add(bgm.clone());
             }
+            Log.d(TAG, "setMediaBeansCount: count:"+count);
 
-            endTime = mDuration % bgm.getDuration();
-            Log.d(TAG, "initBgmComposer: endTime:" + endTime);
+            endTime =0;// mDuration % bgm.getDuration();
+            Log.d(TAG, "setMediaBeansCount: endTime:" + endTime);
             if (endTime != 0) {
                 MediaBean mediaBean = bgm.clone();
                 mediaBean.setTime(bgm.getDuration(), 0, endTime);

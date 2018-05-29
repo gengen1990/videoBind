@@ -1,6 +1,7 @@
 package com.hanzi.videobinddemo.media.Utils;
 
 import android.media.MediaCodec;
+import android.util.Log;
 
 import java.util.ArrayList;
 
@@ -42,6 +43,7 @@ public class ByteContainer {
         if (chunkDataContainer ==null) {
             return true;
         }
+        Log.d("test", "isEmpty: "+chunkDataContainer.isEmpty());
         return chunkDataContainer.isEmpty();
     }
 

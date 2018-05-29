@@ -3,6 +3,7 @@ package com.hanzi.videobinddemo.core;
 import android.app.Application;
 import android.content.Context;
 
+import com.hanzi.videobinddemo.MyUncaughtExceptionHandler;
 
 
 /**
@@ -22,6 +23,8 @@ public class MyApplication extends Application {
 //        SharedPreferencesUtil.getInstance(this,"VideoEditor");
 //        screenWidth = mDisplayMetrics.widthPixels;
 //        screenHeight = mDisplayMetrics.heightPixels;
+        MyUncaughtExceptionHandler.getInstance().init(this);
+
     }
 
     public static Context getContext() {

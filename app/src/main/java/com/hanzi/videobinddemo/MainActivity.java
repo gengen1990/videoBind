@@ -54,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
 
                 mediaBindInfo.setMediaBeans(mediaBeans);
 
-//                mediaBindInfo.setBgm(new MediaBean(bgmPath, 0));
+                mediaBindInfo.setBgm(new MediaBean(bgmPath, 0));
 
                 mediaBind.open(mediaBindInfo);
                 mediaBind.start();

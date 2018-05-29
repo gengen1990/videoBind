@@ -219,6 +219,8 @@ public class VideoComposer {
             mediaFormat.setInteger("height", mOutHeight);
         }
 
+        Log.d(TAG, "startMuxer: mediaFormat:"+mediaFormat.toString());
+
         mOutVideoTrackIndex = mediaFileMuxer.addTrack(mediaFormat);
         Log.d(TAG, "startMuxer: mediaFormat:" + mediaFormat.toString());
         Log.d(TAG, "startMuxer: mOutVideoTrackIndex:" + mOutVideoTrackIndex);

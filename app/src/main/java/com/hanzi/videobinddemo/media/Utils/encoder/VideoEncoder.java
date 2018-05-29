@@ -153,7 +153,7 @@ public class VideoEncoder {
                 }
             }
             Log.i(TAG, "video hardware decoder output thread exit!");
-            stopThread();
+//            stopThread();
         }
     }
 
