@@ -14,7 +14,7 @@ import java.io.File;
 public class Constants {
 
     public static String getBaseFolder() {
-        String baseFolder = Environment.getExternalStorageDirectory().getAbsolutePath() + "/hanzi/Codec/";
+        String baseFolder = Environment.getExternalStorageDirectory().getAbsolutePath() + "/1/Codec/";
         File f = new File(baseFolder);
         if (!f.exists()) {
             boolean b = f.mkdirs();

@@ -1,6 +1,8 @@
 package com.hanzi.videobinddemo.media.Utils.extractor;
 
 
+import android.util.Log;
+
 import com.hanzi.videobinddemo.utils.MuxerUtils;
 
 /**
@@ -8,6 +10,7 @@ import com.hanzi.videobinddemo.utils.MuxerUtils;
  */
 
 public class VideoExtractor extends MediaExtractor {
+    private final String TAG = "VideoExtractor";
     private int frameRate = 0;
     private int width = 0;
     private int height = 0;
@@ -21,11 +24,14 @@ public class VideoExtractor extends MediaExtractor {
 
     @Override
     public void setInfo() {
-        if (isExistedTrackType(AUDIO_TYPE)) {
+        if (isExistedTrackType(VIDEO_TYPE)) {
             frameRate = Integer.parseInt(MuxerUtils.getValue(format.toString(), "frame-rate"));
             width = Integer.parseInt(MuxerUtils.getValue(format.toString(), "width"));
             height = Integer.parseInt(MuxerUtils.getValue(format.toString(), "height"));
             durationUs = Long.parseLong(MuxerUtils.getValue(format.toString(), "durationUs"));
+
+            Log.d(TAG, String.format("VideoExtractor setInfo:  frameRate %d, width %d height %d, durationUs %d",
+                    frameRate, width, height, durationUs));
         }
     }
 

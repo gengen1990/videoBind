@@ -6,7 +6,6 @@ import android.os.HandlerThread;
 import android.util.Log;
 
 import com.hanzi.videobinddemo.bean.EffectInfo;
-import com.hanzi.videobinddemo.media.Utils.MediaFileMuxer;
 import com.hanzi.videobinddemo.media.Variable.MediaBean;
 import com.hanzi.videobinddemo.media.Variable.MediaBindInfo;
 
@@ -41,9 +40,11 @@ public class MediaBind {
     private static String PATH = Environment.getExternalStorageDirectory().getAbsolutePath();
 
     private String finalOutFilePath = PATH + "/1/out.mp4";
+
     private String bgmOutFilePath = PATH + "/1/bgm.aac";
     private String audioOutFilePath = PATH + "/1/audio.aac";
     private String audioMixFilePath = PATH + "/1/audioMix.aac";
+
     private String videoOutFilePath = PATH + "/1/video.mp4";
 
     private boolean[] indexPcmMixOk = new boolean[]{false, false};
@@ -63,12 +64,36 @@ public class MediaBind {
 
     public int open(MediaBindInfo bindInfo) {
         this.mediaBindInfo = bindInfo;
-        initVideoComposer(bindInfo);
+//        initVideoComposer(bindInfo);
         initAudioComposer(bindInfo);
         initBgmComposer(bindInfo);
+
         initMediaAudioMix();
-        initMediaFileMuxer();
         initMediaCombine();
+        return 0;
+    }
+
+    public int start() {
+
+        startAudio();
+
+//        startVideo();
+
+        startCombine();
+        return 0;
+    }
+
+    public int stop() {
+        audioComposer.stop();
+        bgmComposer.stop();
+        audioMix.stop();
+        mediaCombine.stop();
+
+//        videoComposer.stop();
+        return 0;
+    }
+
+    public int destory() {
         return 0;
     }
 
@@ -82,67 +107,6 @@ public class MediaBind {
         audioMixHandler = new Handler(audioMixHandlerThread.getLooper());
 
         audioMix = new AudioMix();
-    }
-
-    public int start() {
-        //获取音频中最小的采样率
-        int audioSampleRate = 44100;
-        if (bgmComposer != null) {
-            audioSampleRate = audioComposer.getMinSampleRate() > bgmComposer.getMinSampleRate() ?
-                    bgmComposer.getMinSampleRate() : audioComposer.getMinSampleRate();
-
-            Log.d(TAG, "start: audioSampleRate:" + audioSampleRate);
-            audioComposer.start(audioSampleRate, 2, true);
-            bgmComposer.start(audioSampleRate, 2, true);
-
-        } else {
-            audioSampleRate = audioComposer.getMinSampleRate();
-            audioComposer.start(audioSampleRate, 2, false);
-        }
-
-
-        audioMixHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                while (true) {
-                    if (indexPcmMixOk[0] && indexPcmMixOk[1]) {
-                        audioMix.open(pcmMixPath, audioMixFilePath, audioComposer.getMinSampleRate(), audioComposer.getChannelCount(), audioComposer.getMaxInputSize());
-                        audioMix.start();
-                        audioMix.setOnFinishListener(new AudioMix.FinishListener() {
-                            @Override
-                            public void onFinish() {
-                                indexVideoAudioOk[0] = true;
-                            }
-                        });
-                    }
-
-                }
-            }
-        });
-
-        videoComposer.start();
-
-        while (indexVideoAudioOk[0] && indexVideoAudioOk[1]) {
-            mediaCombine.open(videoOutFilePath, audioOutFilePath, finalOutFilePath, new MediaCombine.CombineVideoListener() {
-                @Override
-                public void onProgress(int progress) {
-
-                }
-            });
-        }
-        return 0;
-    }
-
-    public int stop() {
-        audioComposer.stop();
-        bgmComposer.stop();
-        audioMix.stop();
-        mediaCombine.stop();
-        return 0;
-    }
-
-    public int destory() {
-        return 0;
     }
 
     private void initAudioComposer(MediaBindInfo bindInfo) {
@@ -164,7 +128,6 @@ public class MediaBind {
     private void initVideoComposer(MediaBindInfo bindInfo) {
         videoComposer = new VideoComposer(bindInfo.getMediaBeans(),
                 bindInfo.getFilter(),
-                bindInfo.getDuration(),
                 bindInfo.getOutputWidth(),
                 bindInfo.getOutputHeight(),
                 videoOutFilePath);
@@ -178,7 +141,7 @@ public class MediaBind {
 
     private void initBgmComposer(MediaBindInfo info) {
         if (info.getBgm() == null) return;
-        long mDuration = info.getDuration();
+        long mDuration = videoComposer.getDurationUs();
         MediaBean bgm = info.getBgm();
 
         if (mDuration <= 0) {
@@ -198,10 +161,63 @@ public class MediaBind {
             }
 
             @Override
-            public void onFinish(String path) {
+            public void onFinishWithoutMix() {
 
             }
         });
+    }
+
+    private void startAudio() {
+        //获取音频中最小的采样率
+        int audioSampleRate = 44100;
+        if (bgmComposer != null) {
+            audioSampleRate = audioComposer.getMinSampleRate() > bgmComposer.getMinSampleRate() ?
+                    bgmComposer.getMinSampleRate() : audioComposer.getMinSampleRate();
+
+            Log.d(TAG, "start: audioSampleRate:" + audioSampleRate);
+            audioComposer.start(audioSampleRate, 2, true);
+            bgmComposer.start(audioSampleRate, 2, true);
+
+        } else {
+
+            audioSampleRate = audioComposer.getMinSampleRate();
+            audioComposer.start(audioSampleRate, 2, false);
+            Log.d(TAG, "start: audioSampleRate:" + audioSampleRate);
+        }
+
+        audioMixHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                while (true) {
+                    if (indexPcmMixOk[0] && indexPcmMixOk[1]) {
+                        audioMix.open(pcmMixPath, audioMixFilePath, audioComposer.getMinSampleRate(), audioComposer.getChannelCount(), audioComposer.getMaxInputSize());
+                        audioMix.start();
+                        audioMix.setOnFinishListener(new AudioMix.FinishListener() {
+                            @Override
+                            public void onFinish() {
+                                indexVideoAudioOk[0] = true;
+                            }
+                        });
+                    }
+
+                }
+            }
+        });
+    }
+
+    private void startVideo() {
+        videoComposer.start();
+    }
+
+    private void startCombine() {
+        while (indexVideoAudioOk[0] && indexVideoAudioOk[1]) {
+            mediaCombine.open(videoOutFilePath, audioOutFilePath, finalOutFilePath, new MediaCombine.CombineVideoListener() {
+                @Override
+                public void onProgress(int progress) {
+
+                }
+            });
+        }
     }
 
     private void setMediaBeansCount(long mDuration, MediaBean bgm, List<MediaBean> mediaBeans) {
@@ -224,9 +240,5 @@ public class MediaBind {
         } catch (CloneNotSupportedException e) {
             e.printStackTrace();
         }
-    }
-
-    private void initMediaFileMuxer() {
-        mediaFileMuxer = new MediaFileMuxer(finalOutFilePath);
     }
 }

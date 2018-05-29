@@ -1,8 +1,8 @@
 package com.hanzi.videobinddemo;
 
-import android.app.Activity;
 import android.os.Bundle;
 import android.os.Environment;
+import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -14,9 +14,8 @@ import com.hanzi.videobinddemo.media.Variable.MediaBindInfo;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.hanzi.videobinddemo.media.MediaBind.ONLY_AUDIO_PROCESS;
 
-public class MainActivity extends Activity {
+public class MainActivity extends AppCompatActivity {
 
     private Button button;
 
@@ -46,7 +45,7 @@ public class MainActivity extends Activity {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                mediaBind = new MediaBind(ONLY_AUDIO_PROCESS);
+                mediaBind = new MediaBind(MediaBind.BOTH_PROCESS);
                 MediaBindInfo mediaBindInfo = new MediaBindInfo();
 
                 List<MediaBean> mediaBeans = new ArrayList<>();

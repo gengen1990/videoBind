@@ -14,7 +14,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 /**
@@ -190,26 +189,26 @@ public class AudioMix {
             }
 
             @Override
-            public void onOutputBuffer(ByteBuffer byteBuffer, MediaCodec.BufferInfo bufferInfo) {
+            public void onOutputBuffer(byte[] data, MediaCodec.BufferInfo bufferInfo) {
 //                byteBuffer.flip();
 
 //                byteBuffer.get(datas);
                 //添加头信息
-                int outBitSize = bufferInfo.size;
-                int outPacketSize = outBitSize + 7;//头文件长度为7
-                byteBuffer.position(bufferInfo.offset);
-                byteBuffer.limit(bufferInfo.offset + outBitSize);
-                byte[] chunkAudio = new byte[outPacketSize];
-                addADTStoPacket(chunkAudio, outPacketSize);
-                byteBuffer.get(chunkAudio, 7, outBitSize);
-                byteBuffer.position(bufferInfo.offset);
+//                int outBitSize = bufferInfo.size;
+//                int outPacketSize = outBitSize + 7;//头文件长度为7
+//                byteBuffer.position(bufferInfo.offset);
+//                byteBuffer.limit(bufferInfo.offset + outBitSize);
+//                byte[] chunkAudio = new byte[outPacketSize];
+//                addADTStoPacket(chunkAudio, outPacketSize);
+//                byteBuffer.get(chunkAudio, 7, outBitSize);
+//                byteBuffer.position(bufferInfo.offset);
 
-                try {
-                    bos.write(chunkAudio, 0, chunkAudio.length);//BufferOutputStream 将文件保存到内存卡中 *.aac
-                    bos.flush();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+//                try {
+//                    bos.write(chunkAudio, 0, chunkAudio.length);//BufferOutputStream 将文件保存到内存卡中 *.aac
+//                    bos.flush();
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
             }
 
             @Override

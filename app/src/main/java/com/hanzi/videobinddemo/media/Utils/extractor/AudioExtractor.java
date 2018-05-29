@@ -1,6 +1,8 @@
 package com.hanzi.videobinddemo.media.Utils.extractor;
 
 
+import android.util.Log;
+
 import com.hanzi.videobinddemo.utils.MuxerUtils;
 
 /**
@@ -31,6 +33,9 @@ public class AudioExtractor extends MediaExtractor {
             maxInputSize = Integer.parseInt(MuxerUtils.getValue(format.toString(),"max-input-size"));
 //            Log.d(TAG, "setInfo: durationUs:"+durationUs);
 //            Log.d(TAG, "setInfo: sample-rate:"+sampleRate);
+
+            Log.d(TAG, String.format("audioExtractor setInfo:  sampleRate %d, channelCount %d durationUs %d, maxInputSize %d",
+                    sampleRate, channelCount, durationUs, maxInputSize));
         }
     }
 
@@ -39,11 +44,12 @@ public class AudioExtractor extends MediaExtractor {
     }
 
 
-    public boolean isNeedToResample(int outSampleRate) {
-        this.outSampleRate = outSampleRate;
+    public boolean isNeedToResample(int sampleRate) {
+        this.outSampleRate = sampleRate;
+        Log.d(TAG, String.format("isNeedToResample sampleRate:%d, outSampleRate:%d",this.sampleRate,outSampleRate));
 //        Log.d(TAG, "isNeedToResample: outSampleRate:"+outSampleRate);
 //        Log.d(TAG, "isNeedToResample: sampleRate:"+sampleRate);
-        if (sampleRate!=outSampleRate) {
+        if (this.sampleRate!=outSampleRate) {
             return true;
         }else {
             return false;

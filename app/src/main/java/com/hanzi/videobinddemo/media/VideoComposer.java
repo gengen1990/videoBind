@@ -36,7 +36,7 @@ public class VideoComposer {
     private List<VideoExtractor> mMediaExtractors = new ArrayList<>();
 
     private MediaFileMuxer mediaFileMuxer;
-    private long mDuration;
+    private long mDuration = 0;
 
     private int mFrameRate = 15, mOutWidth = 0, mOutHeight = 0;
 
@@ -55,20 +55,21 @@ public class VideoComposer {
 
     private VideoComposerCallBack videoComposerCallBack;
 
-    public VideoComposer(List<MediaBean> mediaBeans, AFilter filter
-            , long duration, int outWidth, int outHeight, String outFilePath) {
+    public VideoComposer(List<MediaBean> mediaBeans, AFilter filter, int outWidth, int outHeight, String outFilePath) {
         this.mMediaBeans = mediaBeans;
         this.mFilter = filter;
-        this.mDuration = duration;
         this.mOutWidth = outWidth;
         this.mOutHeight = outHeight;
         this.outFilePath = outFilePath;
+        Log.i(TAG, String.format("VideoComposer:  mOutWidth %d, mOutHeight %d outFilePath %s",
+                mOutWidth, mOutHeight, outFilePath));
 
         mediaFileMuxer = new MediaFileMuxer(outFilePath);
 
         for (MediaBean bean : mMediaBeans) {
             VideoExtractor extractor = new VideoExtractor(bean.getUrl(), bean.getStartTimeUs(), bean.getEndTimeUs());
             mMediaExtractors.add(extractor);
+            mDuration += extractor.getDurationUs();
         }
 
         mergeThread = new HandlerThread("merge");
@@ -96,7 +97,7 @@ public class VideoComposer {
 
     private boolean isEditOk() {
         boolean isEditOk = false;
-        while ((!isEditOk)&&(!beStop)){
+        while ((!isEditOk) && (!beStop)) {
             int i = 0;
             for (Integer key : videoEditIndex.keySet()) {
                 if (!videoEditIndex.get(key)) {
@@ -112,7 +113,7 @@ public class VideoComposer {
     }
 
     public void stop() {
-        beStop =true;
+        beStop = true;
         stopMuxer();
         stopExtractor();
     }
@@ -157,7 +158,7 @@ public class VideoComposer {
         encoder.start();
 
         VideoDecoder decoder = new VideoDecoder();
-        openDecoder(index, decoder, videoExtractor,encoder,firstSampleTime,startTimeUs);
+        openDecoder(index, decoder, videoExtractor, encoder, firstSampleTime, startTimeUs);
         decoder.start();
 
         inputForDecoder(videoExtractor, firstSampleTime, durationUs, startTimeUs, decoder);
@@ -176,12 +177,12 @@ public class VideoComposer {
 
                     @Override
                     public void onOutputBuffer(ByteBuffer byteBuffer, MediaCodec.BufferInfo bufferInfo) {
-                        mediaFileMuxer.writeSampleData(mOutVideoTrackIndex,byteBuffer,bufferInfo);
+                        mediaFileMuxer.writeSampleData(mOutVideoTrackIndex, byteBuffer, bufferInfo);
                     }
 
                     @Override
                     public void encodeOver() {
-                        videoEditIndex.put(index,true);
+                        videoEditIndex.put(index, true);
                     }
                 });
     }
@@ -191,7 +192,7 @@ public class VideoComposer {
             return;
         }
         int index = 0;
-        for (VideoExtractor videoExtractor:mMediaExtractors) {
+        for (VideoExtractor videoExtractor : mMediaExtractors) {
             long firstSampleTime = videoExtractor.getSampleTime();
             long durationUs = videoExtractor.getDurationUs();
             long startTimeUs = videoExtractor.getStartTimeUs();
@@ -243,7 +244,7 @@ public class VideoComposer {
     }
 
     private void openDecoder(int index, VideoDecoder decoder, final VideoExtractor videoExtractor,
-                             final VideoEncoder videoEncoder,long firstSampleTime, long startTimeUs) {
+                             final VideoEncoder videoEncoder, long firstSampleTime, long startTimeUs) {
         MediaFormat format = videoExtractor.getFormat();
         VideoInfo videoInfo = new VideoInfo();
         videoInfo.width = videoExtractor.getWidth();
@@ -283,6 +284,8 @@ public class VideoComposer {
             long sampleTime = videoExtractor.getSampleTime();
             long now = videoExtractor.getSampleTime() - firstSampleTime - startTimeUs;
 
+            Log.d(TAG, String.format("now %d sampleSize %d  sampleTime %d",now,sampleSize,sampleTime));
+
             if (sampleSize < 0 || (now >= durationUs || now == -1)) {
                 isRunning = false;
             } else {
@@ -294,6 +297,9 @@ public class VideoComposer {
         }
     }
 
+    public long getDurationUs() {
+        return mDuration;
+    }
 
     public interface VideoComposerCallBack {
         public void onh264Path();

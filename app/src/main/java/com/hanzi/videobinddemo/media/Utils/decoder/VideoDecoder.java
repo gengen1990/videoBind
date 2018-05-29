@@ -117,7 +117,8 @@ public class VideoDecoder {
                     idx = decoder.dequeueOutputBuffer(outputInfo, TIMEOUT_USEC);
                     if (idx == MediaCodec.INFO_TRY_AGAIN_LATER) {
                         /**没有可用的解码器output*/
-                        mRunning = false;
+//                        mRunning = false;
+                        Log.d(TAG, "run: INFO_TRY_AGAIN_LATER");
                     } else if (idx == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
                         outputBuffers = decoder.getOutputBuffers();
                     } else if (idx == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {

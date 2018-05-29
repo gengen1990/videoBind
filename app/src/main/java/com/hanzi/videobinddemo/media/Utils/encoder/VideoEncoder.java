@@ -21,7 +21,7 @@ public class VideoEncoder {
     final int TIMEOUT_USEC = 0;
 
     ByteBuffer[] inputBuffers;
-    ByteBuffer[] encodeOutputBuffers;
+    ByteBuffer[] outputBuffers;
     MediaCodec.BufferInfo inputInfo;
 
     private Thread mOutputThread;
@@ -54,7 +54,7 @@ public class VideoEncoder {
         encoder.start();
 
         inputBuffers = encoder.getInputBuffers();
-        encodeOutputBuffers = encoder.getOutputBuffers();
+        outputBuffers = encoder.getOutputBuffers();
         inputInfo = new MediaCodec.BufferInfo();
 
         mOutputThread = new Thread(new CEncoderRunnable());
@@ -74,9 +74,24 @@ public class VideoEncoder {
     }
 
     public int stop() {
-        encoder.stop();
-        encoder.release();
+        stopEncoder();
+        stopThread();
         return 0;
+    }
+
+    private void stopThread() {
+        if (mOutputThread != null) {
+            try {
+                mOutputThread.join();
+            } catch (Exception e) {
+                Log.e(TAG, "output thread join failed:" + e);
+            }
+            mOutputThread = null;
+        }
+        if (encoder!=null) {
+            encoder.stop();
+            encoder.release();
+        }
     }
 
     public int destory() {
@@ -91,10 +106,10 @@ public class VideoEncoder {
         @Override
         public void run() {
             Log.i(TAG, "video hardware decoder output thread running");
-            if (mRunning) {
-                Log.e(TAG, "video hardware decoder start again!");
-                return;
-            }
+//            if (mRunning) {
+//                Log.e(TAG, "video hardware decoder start again!");
+//                return;
+//            }
             mRunning = true;
             long lastStamp = -1;
             while (mRunning) {
@@ -102,20 +117,20 @@ public class VideoEncoder {
                     MediaCodec.BufferInfo outputInfo = new MediaCodec.BufferInfo();
                     int index = encoder.dequeueOutputBuffer(outputInfo, TIMEOUT_USEC);
                     if (index == MediaCodec.INFO_TRY_AGAIN_LATER) {
-                        mRunning = false;
+//                        mRunning = false;
+                        Log.d(TAG, "run: INFO_TRY_AGAIN_LATER");
                     } else if (index == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
-                        encodeOutputBuffers = encoder.getOutputBuffers();
+                        outputBuffers = encoder.getOutputBuffers();
                     } else if (index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                         MediaFormat newFormat = encoder.getOutputFormat();
                         Log.d(TAG, "run: newFormat:" + newFormat.toString());
                     } else if (index < 0) {
 
                     } else {
-                        ByteBuffer outputData = inputBuffers[index];
+                        ByteBuffer outputData = outputBuffers[index];
                         boolean done = (outputInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0;
                         if (done) {
                             mRunning = false;
-                            stop();
                             videoEncoderCallback.encodeOver();
                         }
                         if (outputInfo.presentationTimeUs == 0 && !done) {
@@ -138,7 +153,19 @@ public class VideoEncoder {
                 }
             }
             Log.i(TAG, "video hardware decoder output thread exit!");
+            stopThread();
         }
+    }
+
+    private int stopEncoder() {
+        try {
+            int idx = encoder.dequeueInputBuffer(-1);
+
+            encoder.queueInputBuffer(idx, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+        } catch (IllegalStateException e) {
+            Log.e(TAG, "dequeueOutputBuffer exception:" + e);
+        }
+        return 0;
     }
 
     public interface VideoEncoderCallBack {

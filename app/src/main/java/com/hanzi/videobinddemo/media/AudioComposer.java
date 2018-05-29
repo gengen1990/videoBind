@@ -4,7 +4,6 @@ import android.media.MediaCodec;
 import android.media.MediaFormat;
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.os.Message;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
@@ -26,6 +25,8 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static android.media.MediaExtractor.SEEK_TO_PREVIOUS_SYNC;
 
@@ -64,7 +65,7 @@ public class AudioComposer {
 
     private AudioComposerCallBack audioComposerCallBack;
 
-    private ByteContainer byteContainer;
+    private HashMap<Integer, ByteContainer> pcmContainer =new HashMap<>();
 
     private HashMap<Integer, ByteContainer> resampleDataHashMap = new HashMap<>();
     /**
@@ -86,8 +87,10 @@ public class AudioComposer {
 
     private final int RESAMPLE = 0;
 
+    static ExecutorService executorService = Executors.newFixedThreadPool(4);
+
     String suffix = "audio";
-    private int outMaxInputSize= 500 * 1024;
+    private int outMaxInputSize = 1000 * 1024;
 
     public AudioComposer(List<MediaBean> mediaBeans, long duration, String outFilePath, boolean isBgm) {
         this.mMediaBeans = mediaBeans;
@@ -102,7 +105,12 @@ public class AudioComposer {
         for (MediaBean bean : mMediaBeans) {
             AudioExtractor extractor = new AudioExtractor(bean.getUrl(), bean.getStartTimeUs(), bean.getEndTimeUs());
             mMediaExtractors.add(extractor);
+            if (outMaxInputSize > extractor.getMaxInputSize()) {
+                outMaxInputSize = extractor.getMaxInputSize();
+            }
         }
+
+        Log.d(TAG, String.format("AudioComposer isBgm:%b, mDuration:%d,outMaxInputSize:%d", isBgm, mDuration, outMaxInputSize));
 
         mergeThread = new HandlerThread("mergeWithoutResample");
         mergeThread.start();
@@ -185,6 +193,7 @@ public class AudioComposer {
 
     /**
      * 多个文件放到一个文件中
+     *
      * @param paths
      * @return
      */
@@ -227,16 +236,20 @@ public class AudioComposer {
      * @param byteContainer
      */
     private void mergeByteBuffer(ByteContainer byteContainer) {
-        ByteBuffer byteBuffer = ByteBuffer.allocate(byteContainer.getSize());
-        long audioPts=0;
+        if(byteContainer==null) {
+            return;
+        }
+
+        long audioPts = 0;
         while (!byteContainer.isEmpty()) {
             byte[] data = byteContainer.getData();
+            ByteBuffer byteBuffer = ByteBuffer.allocate(data.length);
             MediaCodec.BufferInfo bufferInfo = byteContainer.getBufferInfo();
-            Log.d(TAG, "mergeByteBuffer: bufferInfo.presentationTimeUs:"+bufferInfo.presentationTimeUs);
-            audioPts= bufferInfo.presentationTimeUs;
+            Log.d(TAG, "mergeByteBuffer: bufferInfo.presentationTimeUs:" + bufferInfo.presentationTimeUs);
+            audioPts = bufferInfo.presentationTimeUs;
             byteBuffer.put(data);
             byteBuffer.flip();
-            bufferInfo.presentationTimeUs = ptsOffset+ bufferInfo.presentationTimeUs;
+            bufferInfo.presentationTimeUs = ptsOffset + bufferInfo.presentationTimeUs;
             mediaFileMuxer.writeSampleData(mOutAudioTrackIndex, byteBuffer, bufferInfo);
         }
         ptsOffset += audioPts;
@@ -249,6 +262,7 @@ public class AudioComposer {
         while ((!isResampleOk) && (!beStop)) {
             int i = 0;
             for (Integer key : resampleIndex.keySet()) {
+//                Log.d(TAG, "isResampleOk: key:"+key);
                 if (!resampleIndex.get(key)) {
                     break;
                 }
@@ -282,7 +296,6 @@ public class AudioComposer {
 
     /**
      * 根据采样率重新设置 format
-     *
      */
     private void startMuxer() {
         MediaFormat mediaFormat = mMediaExtractors.get(0).getFormat();
@@ -314,9 +327,14 @@ public class AudioComposer {
             if (endTimeUs != -1 && endTimeUs < durationUs) {
                 durationUs = endTimeUs - startTimeUs;
             }
+
+            Log.d(TAG, String.format("startResample index %d, firstSampleTime %d,durationUs %d,startTimeUs %d ,endTimeUs %d"
+                    , index, firstSampleTime, durationUs, startTimeUs, endTimeUs));
+
             if (isMix || audioExtractor.isNeedToResample(outSampleRate)) {
+                Log.d(TAG, "startResample resampleIndex index:" + index);
                 resampleIndex.put(index, false);
-                ReSampling(index, audioExtractor, firstSampleTime, durationUs, startTimeUs, endTimeUs);
+                ReSamplingByDecoder(index, audioExtractor, firstSampleTime, durationUs, startTimeUs, endTimeUs);
             }
             index++;
         }
@@ -374,10 +392,10 @@ public class AudioComposer {
      *
      * @param audioExtractor
      */
-    private void ReSampling(int index, final AudioExtractor audioExtractor, long firstSampleTime, long durationUs,
-                            long startTimeUs, long endTimeUs) {
+    private void ReSamplingByDecoder(int index, final AudioExtractor audioExtractor, long firstSampleTime, long durationUs,
+                                     long startTimeUs, long endTimeUs) {
 
-        initResampleHandler(index);
+//        initResampleHandler(index);
 
         AudioDecoder decoder = new AudioDecoder();
         openDecoder(index, decoder, audioExtractor);
@@ -386,50 +404,58 @@ public class AudioComposer {
         inputForDecoder(audioExtractor, firstSampleTime, durationUs, startTimeUs, decoder);
     }
 
-    private void initResampleHandler(final int index) {
-        resamplerThread = new HandlerThread("resample");
-        resamplerThread.start();
+//    private void initResampleHandler(final int index) {
+//        resamplerThread = new HandlerThread("resample");
+//        resamplerThread.start();
+//
+//        resamplerHandler = new Handler(resamplerThread.getLooper()) {
+//            @Override
+//            public void handleMessage(Message msg) {
+////                if (msg.what == RESAMPLE) {
+//                String inputFilePath = msg.getData().getString("inputFilePath");
+//                String outputFilePath = msg.getData().getString("outputFilePath");
+//                int inputSampleRate = msg.getData().getInt("inputSampleRate");
+//                int outSampleRate = msg.getData().getInt("outSampleRate");
+//                int channelCount = msg.getData().getInt("channelCount");
+//                int maxInputSize = msg.getData().getInt("maxInputSize");
+//
+//                Log.d(TAG, String.format("initResampleHandler handleMessage" +
+//                                "index %d, inputFilePath %s, outputFilePath %s,inputSampleRate %d,outSampleRate %d ,channelCount %d, maxInputSize %d"
+//                        , index, inputFilePath, outputFilePath, inputSampleRate, outSampleRate, channelCount, maxInputSize));
+//
+//                resample(inputSampleRate, outSampleRate, inputFilePath, outputFilePath);
+//
+//                if (!isMix) {
+//                    pcmContainer = new ByteContainer();
+//                    getOutputPCMData(outputFilePath);
+//
+//                    AudioEncoder audioEncoder = new AudioEncoder();
+//                    openEncoder(index, audioEncoder, outSampleRate, channelCount, maxInputSize);
+//                    audioEncoder.start();
+//                    inputForEncoder(audioEncoder);
+//
+//                } else {
+//                    pcmPathHashMap.put(index, outputFilePath);
+//                    resampleIndex.put(index, true);
+//                }
+//
+////                }
+//            }
+//        };
+//    }
 
-        resamplerHandler = new Handler(resamplerThread.getLooper()) {
-            @Override
-            public void handleMessage(Message msg) {
-                if (msg.what == RESAMPLE) {
-                    String inputFilePath = msg.getData().getString("inputFilePath");
-                    String outputFilePath = msg.getData().getString("outputFilePath");
-                    int inputSampleRate = msg.getData().getInt("inputSampleRate");
-                    int outSampleRate = msg.getData().getInt("outSampleRate");
-                    int channelCount = msg.getData().getInt("channelCount");
-                    int maxInputSize = msg.getData().getInt("maxInputSize");
-                    resample(inputSampleRate, outSampleRate, inputFilePath, outputFilePath);
-
-                    if (!isMix) {
-                        byteContainer = new ByteContainer();
-                        getOutputPCMData(outputFilePath);
-
-                        AudioEncoder audioEncoder = new AudioEncoder();
-                        openEncoder(index, audioEncoder, outSampleRate, channelCount, maxInputSize);
-                        audioEncoder.start();
-                        inputForEncoder(audioEncoder);
-
-                    } else {
-                        pcmPathHashMap.put(index, outputFilePath);
-                        resampleIndex.put(index, true);
-                    }
-
-                }
-            }
-        };
-    }
-
-    private void inputForEncoder(AudioEncoder audioEncoder) {
+    private void inputForEncoder(int index,AudioEncoder audioEncoder) {
         while (true) {
-            if (!byteContainer.isStarted()) {
+            if (pcmContainer.get(index)!=null && !pcmContainer.get(index).isStarted()) {
+                Log.d(TAG, "inputForEncoder: continue");
                 continue;
             }
-            if (byteContainer.isEmpty()) {
-                byte[] chunkPcm = byteContainer.getData();
-                audioEncoder.encode(chunkPcm, false);
+            if (!pcmContainer.get(index).isEmpty()) {
+                byte[] chunkPcm = pcmContainer.get(index).getData();
+                Log.d(TAG, "inputForEncoder: chunkPcm size:"+chunkPcm.length);
+                audioEncoder.encode(chunkPcm,false);
             } else {
+                Log.d(TAG, "inputForEncoder: fail");
                 audioEncoder.encode(null, true);
                 break;
             }
@@ -439,13 +465,14 @@ public class AudioComposer {
     /**
      * 从已经进行重采样的文件中获取数据
      */
-    private void getOutputPCMData(String outputFilePath) {
+    private void getOutputPCMData(int index, String outputFilePath) {
         try {
             byte[] buffer = new byte[8 * 1024];
             File file = new File(outputFilePath);
             FileInputStream fileInputStream = new FileInputStream(file);
             while (fileInputStream.read(buffer) != -1) {
-                byteContainer.putData(buffer);
+                Log.d(TAG, "run: pcmContainer index:"+index);
+                pcmContainer.get(index).putData(buffer);
             }
         } catch (FileNotFoundException e) {
             Log.e(TAG, "getOutputPCMData: FileNotFoundException");
@@ -471,7 +498,7 @@ public class AudioComposer {
      * @param audioExtractor
      */
     @NonNull
-    private void openDecoder(int index, AudioDecoder decoder, final AudioExtractor audioExtractor) {
+    private void openDecoder(final int index, AudioDecoder decoder, final AudioExtractor audioExtractor) {
 
         if (isBgm) {
             suffix = "bgm";
@@ -482,7 +509,7 @@ public class AudioComposer {
         final String mPcmInFilePath = Constants.getPath("audio/", suffix + "pcmSrc" + index + ".pcm");
         final String mPcmOutFilePath = Constants.getPath("audio/", suffix + "pcmDst" + index + ".pcm");
         try {
-            final FileOutputStream fos = new FileOutputStream(mPcmInFilePath);
+            final FileOutputStream fos1 = new FileOutputStream(mPcmInFilePath);
             MediaFormat format = audioExtractor.getFormat();
             decoder.open(format, new AudioDecoder.AudioDecodeCallBack() {
                 @Override
@@ -493,8 +520,8 @@ public class AudioComposer {
                 @Override
                 public void onOutputBuffer(byte[] bytes) {
                     try {
-                        fos.write(bytes);
-                        fos.flush();
+                        fos1.write(bytes);
+                        fos1.flush();
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -503,20 +530,59 @@ public class AudioComposer {
                 @Override
                 public void decodeOver() {
                     try {
-                        fos.close();
-                        Message message = new Message();
-                        message.getData().putString("inputFilePath", mPcmInFilePath);
-                        message.getData().putString("outputFilePath", mPcmOutFilePath);
-                        message.getData().putInt("inputSampleRate", audioExtractor.getInitSampleRate());
-                        message.getData().putInt("outSampleRate", outSampleRate);
-                        message.getData().putInt("channelCount", audioExtractor.getChannelCount());
-                        message.getData().putInt("maxInputSize", audioExtractor.getMaxInputSize());
-                        resamplerHandler.sendMessage(message);
+                        fos1.close();
+//                        Message message = new Message();
+//                        message.getData().putString("inputFilePath", mPcmInFilePath);
+//                        message.getData().putString("outputFilePath", mPcmOutFilePath);
+//                        message.getData().putInt("inputSampleRate", audioExtractor.getInitSampleRate());
+//                        message.getData().putInt("outSampleRate", outSampleRate);
+//                        message.getData().putInt("channelCount", audioExtractor.getChannelCount());
+//                        message.getData().putInt("maxInputSize", audioExtractor.getMaxInputSize());
+//                        resamplerHandler.sendMessage(message);
+                        Log.d(TAG, "decodeOver: ");
+                        executorService.execute(new Runnable() {
+                            @Override
+                            public void run() {
+                                int inputSampleRate = audioExtractor.getInitSampleRate();
+                                int channelCount = audioExtractor.getChannelCount();
+                                int maxInputSize = audioExtractor.getMaxInputSize();
+                                Log.d(TAG, String.format("decodeOver " +
+                                                "index %d, inputFilePath %s, outputFilePath %s,inputSampleRate %d,outSampleRate %d ,channelCount %d, maxInputSize %d"
+                                        , index, mPcmInFilePath, mPcmOutFilePath, inputSampleRate
+                                        , outSampleRate, channelCount, maxInputSize
+                                ));
+
+                                resample(inputSampleRate, outSampleRate, mPcmInFilePath, mPcmOutFilePath);
+
+                                if (!isMix) {
+                                    Log.d(TAG, "run: !isMix");
+                                    pcmContainer.put(index, new ByteContainer()); //= new ByteContainer();
+                                    new Thread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            getOutputPCMData(index,mPcmOutFilePath);
+                                        }
+                                    }).start();
+
+                                    AudioEncoder audioEncoder = new AudioEncoder();
+                                    openEncoder(index, audioEncoder, outSampleRate, channelCount, maxInputSize);
+                                    audioEncoder.start();
+                                    inputForEncoder(index, audioEncoder);
+
+                                } else {
+                                    Log.d(TAG, "run: isMix");
+                                    pcmPathHashMap.put(index, mPcmOutFilePath);
+                                    resampleIndex.put(index, true);
+                                }
+                            }
+                        });
+
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
                 }
             });
+            decoder.start();
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
@@ -530,22 +596,24 @@ public class AudioComposer {
             }
 
             @Override
-            public void onOutputBuffer(ByteBuffer byteBuffer, MediaCodec.BufferInfo bufferInfo) {
-                byteBuffer.flip();
-                byte[] datas = new byte[byteBuffer.limit()];
-                byteBuffer.get(datas);
+            public void onOutputBuffer(byte[] data, MediaCodec.BufferInfo bufferInfo) {
+
+                Log.d(TAG, "onOutputBuffer: index:"+index);
+                Log.d(TAG, "onOutputBuffer: data.length:"+data.length);
 
                 if (!resampleDataHashMap.containsKey(index)) {
+                    Log.d(TAG, "onOutputBuffer: put");
                     ByteContainer byteContainer = new ByteContainer();
                     resampleDataHashMap.put(index, byteContainer);
                 }
-                resampleDataHashMap.get(index).putData(datas);
+                resampleDataHashMap.get(index).putData(data);
                 resampleDataHashMap.get(index).putBufferInfo(bufferInfo);
-                resampleDataHashMap.get(index).setSize(byteBuffer.limit());
+                resampleDataHashMap.get(index).setSize(data.length);
             }
 
             @Override
             public void encodeOver() {
+                Log.d(TAG, "encodeOver: index:"+index);
                 resampleIndex.put(index, true);
             }
         });
@@ -568,12 +636,15 @@ public class AudioComposer {
             int sampleSize = audioExtractor.readSampleData(mReadBuf, 0);
             long sampleTime = audioExtractor.getSampleTime();
             long now = audioExtractor.getSampleTime() - firstSampleTime - startTimeUs;
-
+            Log.d(TAG, String.format("inputForDecoder: sampleSize %d  sampleTime %d now %d:",sampleSize,sampleTime,now));
             if (sampleSize < 0 || (now >= durationUs || now == -1)) {
+                Log.d(TAG, "inputForDecoder: isRunning :"+isRunning);
+                decoder.decode(mReadBuf, -1, sampleTime);
                 isRunning = false;
             } else {
                 mReadBuf.rewind();
                 if (!decoder.decode(mReadBuf, sampleSize, sampleTime)) {
+                    Log.d(TAG, "inputForDecoder: isRunning error:"+isRunning);
                     isRunning = false;
                 }
             }
