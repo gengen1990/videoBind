@@ -8,7 +8,10 @@ import android.util.Log;
 import com.hanzi.videobinddemo.bean.EffectInfo;
 import com.hanzi.videobinddemo.media.Variable.MediaBean;
 import com.hanzi.videobinddemo.media.Variable.MediaBindInfo;
+import com.hanzi.videobinddemo.media.surface.AudioCodec;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -75,9 +78,7 @@ public class MediaBind {
 
     public int start() {
         startAudio();
-
 //        startVideo();
-
         startCombine();
         return 0;
     }
@@ -113,9 +114,9 @@ public class MediaBind {
         audioComposer.setAudioComposerCallBack(new AudioComposer.AudioComposerCallBack() {
             @Override
             public void onPcmPath(String path) {
-                indexPcmMixOk[0] = true;
+//                indexPcmMixOk[0] = true;
                 pcmMixPaths[0] = path;
-                Log.d(TAG, "onPcmPath: 0");
+
             }
 
             @Override
@@ -157,9 +158,39 @@ public class MediaBind {
         bgmComposer.setAudioComposerCallBack(new AudioComposer.AudioComposerCallBack() {
             @Override
             public void onPcmPath(String path) {
-                indexPcmMixOk[1] = true;
+//                indexPcmMixOk[1] = true;
                 pcmMixPaths[1] = path;
                 Log.d(TAG, "onPcmPath: 1");
+//                String audioOutFilePath = PATH + "/1/testBgm.aac";
+//
+//                File file=new File(path);
+//                File[]  files=new File[] {file};
+//
+//                try {
+//                    AudioCodec.pcmMix(files, audioOutFilePath, 1, 1, 44100, new AudioCodec.AudioDecodeListener() {
+//                        @Override
+//                        public void getSampleRate(int sample) {
+//
+//                        }
+//
+//                        @Override
+//                        public void decodeOver() {
+//
+//                        }
+//
+//                        @Override
+//                        public void decodeFail() {
+//
+//                        }
+//
+//                        @Override
+//                        public void onProgress(int progress) {
+//
+//                        }
+//                    });
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
             }
 
             @Override
@@ -179,9 +210,7 @@ public class MediaBind {
             Log.d(TAG, "start: audioSampleRate bgm:" + audioSampleRate);
             audioComposer.start(audioSampleRate, 2, true);
             bgmComposer.start(audioSampleRate, 2, true);
-
         } else {
-
             audioSampleRate = audioComposer.getMinSampleRate();
             audioComposer.start(audioSampleRate, 2, false);
             Log.d(TAG, "start: audioSampleRate:" + audioSampleRate);
@@ -192,7 +221,6 @@ public class MediaBind {
             public void run() { 
                 while (true) {
                     if (indexPcmMixOk[0] && indexPcmMixOk[1]) {
-                        Log.d(TAG, "run: audioMix");
                         audioMix.open(pcmMixPaths, audioMixFilePath,audioComposer.getFormat(), audioComposer.getMinSampleRate(), audioComposer.getChannelCount(), audioComposer.getMaxInputSize());
                         audioMix.start();
                         audioMix.setOnFinishListener(new AudioMix.FinishListener() {

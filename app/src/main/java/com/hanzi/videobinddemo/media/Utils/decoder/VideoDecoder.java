@@ -10,6 +10,8 @@ import com.hanzi.videobinddemo.media.surface.OutputSurface;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Created by gengen on 2018/5/22.
@@ -26,13 +28,15 @@ public class VideoDecoder {
 
     private Thread mOutputThread;
 
+    static ExecutorService executorService = Executors.newFixedThreadPool(4);
+
     private boolean mRunning = false;
 
     private VideoDecodeCallBack videoDecodeCallBack;
 
     private OutputSurface outputSurface;
 
-    final static int TIMEOUT_USEC = 0;
+    final static int TIMEOUT_USEC = -1;
 
     private long mFirstSampleTime;
     private long mStartTimeUs;
@@ -40,7 +44,10 @@ public class VideoDecoder {
     public int open(MediaBean mediaBean, AFilter filter, MediaFormat trackFormat,
                     long firstSampleTime, long startTimeUs, VideoDecodeCallBack videoDecodeCallback) {
         try {
+            Log.d(TAG, "open: mFirstSampleTime:"+mFirstSampleTime);
+            Log.d(TAG, "open: startTimeUs:"+startTimeUs);
             decoder = MediaCodec.createDecoderByType(trackFormat.getString(MediaFormat.KEY_MIME));
+
             outputSurface = new OutputSurface(mediaBean, filter);
             decoder.configure(trackFormat, outputSurface.getSurface(), null, 0);
             this.mFirstSampleTime = firstSampleTime;
@@ -53,6 +60,7 @@ public class VideoDecoder {
     }
 
     public int start() {
+        Log.d(TAG, "start: ");
         decoder.start();
         inputBuffers = decoder.getInputBuffers();
         outputBuffers = decoder.getOutputBuffers();
@@ -60,11 +68,14 @@ public class VideoDecoder {
 
         mOutputThread = new Thread(new CDecoderRunnable());
         mOutputThread.start();
+//        executorService.execute(new CDecoderRunnable());
         return 0;
     }
 
     public boolean decode(ByteBuffer byteBuffer, int sampleSize, long sampleTime) {
+        Log.d(TAG, "decode: ");
         int index = decoder.dequeueInputBuffer(TIMEOUT_USEC);
+        Log.d(TAG, "run: dequeueInputBuffer index:"+index);
         if (index >= 0) {
             ByteBuffer inputBuffer = inputBuffers[index];
             inputBuffer.clear();
@@ -80,6 +91,7 @@ public class VideoDecoder {
                 inputInfo.presentationTimeUs = sampleTime;
                 decoder.queueInputBuffer(index, inputInfo.offset, sampleSize, inputInfo.presentationTimeUs, 0);
                 videoDecodeCallBack.onInputBuffer();
+
                 return true;
             }
         }
@@ -110,11 +122,11 @@ public class VideoDecoder {
             mRunning = true;
 
             int idx;
-            byte[] chunkPCM;
             while (mRunning) {
                 try {
                     outputInfo = new MediaCodec.BufferInfo();
                     idx = decoder.dequeueOutputBuffer(outputInfo, TIMEOUT_USEC);
+                    Log.d(TAG, "run: dequeueOutputBuffer idx:"+idx);
                     if (idx == MediaCodec.INFO_TRY_AGAIN_LATER) {
                         /**没有可用的解码器output*/
 //                        mRunning = false;
@@ -126,12 +138,17 @@ public class VideoDecoder {
                     } else if (idx >= 0) {
                         boolean doRender = (outputInfo.size != 0 && outputInfo.presentationTimeUs - mFirstSampleTime > mStartTimeUs);
                         decoder.releaseOutputBuffer(idx, doRender);
+                        Log.d(TAG, "run: doRender:"+doRender);
                         if (doRender) {
                             // This waits for the image and renders it after it arrives.
+                            Log.d(TAG, "run: awaitNewImage before");
                             outputSurface.awaitNewImage();
 
+                            Log.d(TAG, "run: drawImage before");
                             outputSurface.drawImage();
                             // Send it to the encoder.
+
+                            Log.d(TAG, "run: outputBuffers.toString():"+outputBuffers.toString());
                             videoDecodeCallBack.onOutputBufferInfo(outputInfo);
 
                         }

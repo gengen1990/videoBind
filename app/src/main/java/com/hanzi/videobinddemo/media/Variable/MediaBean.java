@@ -28,7 +28,7 @@ public class MediaBean implements Cloneable {
     private int audioRate = 44100;
     private int channelCount = 2;
 
-    private List<EffectInfo> effectInfos;
+    private List<EffectInfo> effectInfos=new ArrayList<>();
 
     public MediaBean(String url, int type) {
         this.url = url;

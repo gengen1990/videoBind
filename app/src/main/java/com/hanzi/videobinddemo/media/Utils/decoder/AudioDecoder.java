@@ -106,14 +106,14 @@ public class AudioDecoder {
             byte[] chunkPCM;
             while (mRunning) {
                 try {
-                    idx = decoder.dequeueOutputBuffer(outputInfo, TIMEOUT_USEC);
+                    idx = decoder.dequeueOutputBuffer(outputInfo, 10000);
                     Log.d(TAG, "run: idx:"+idx);
                     if (idx == MediaCodec.INFO_TRY_AGAIN_LATER) {
                         /**没有可用的解码器output*/
                         Log.d(TAG, "run: INFO_TRY_AGAIN_LATER");
 //                        mRunning = false;
                     } else if (idx == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
-                        outputBuffers = decoder.getOutputBuffers();
+//                        outputBuffers = decoder.getOutputBuffers();
                     } else if (idx == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                         Log.i(TAG, "decode output format changed:" + decoder.getOutputFormat().toString());
                     } else if (idx >= 0) {

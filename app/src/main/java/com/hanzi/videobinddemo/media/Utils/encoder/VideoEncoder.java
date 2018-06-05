@@ -32,14 +32,18 @@ public class VideoEncoder {
 
     public int open(String encodeType, int width, int height, int frameRate,
                     VideoEncoderCallBack videoEncoderCallback) {
+        Log.d(TAG, "open: frameRate:"+frameRate);
+        Log.d(TAG, "open: width:"+width);
+        Log.d(TAG, "open: height:"+height);
         try {
+            encoder = MediaCodec.createEncoderByType(encodeType);
+
             MediaFormat mediaFormat = MediaFormat.createVideoFormat(encodeType, width, height);
-            mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, 2000000);
+            mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, 3000000);
             mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, frameRate);
             mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
             mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
 
-            encoder = MediaCodec.createEncoderByType(encodeType);
             encoder.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
             inputSurface = new InputSurface(encoder.createInputSurface());
             this.videoEncoderCallback = videoEncoderCallback;
@@ -51,6 +55,7 @@ public class VideoEncoder {
     }
 
     public int start() {
+        Log.d(TAG, "start: ");
         encoder.start();
 
         inputBuffers = encoder.getInputBuffers();
@@ -75,7 +80,11 @@ public class VideoEncoder {
 
     public int stop() {
         stopEncoder();
-        stopThread();
+//        stopThread();
+        if (encoder!=null) {
+            encoder.stop();
+            encoder.release();
+        }
         return 0;
     }
 
@@ -88,10 +97,7 @@ public class VideoEncoder {
             }
             mOutputThread = null;
         }
-        if (encoder!=null) {
-            encoder.stop();
-            encoder.release();
-        }
+
     }
 
     public int destory() {
@@ -105,7 +111,7 @@ public class VideoEncoder {
     private final class CEncoderRunnable implements Runnable {
         @Override
         public void run() {
-            Log.i(TAG, "video hardware decoder output thread running");
+            Log.i(TAG, "video hardware encoder output thread running");
 //            if (mRunning) {
 //                Log.e(TAG, "video hardware decoder start again!");
 //                return;
@@ -118,7 +124,7 @@ public class VideoEncoder {
                     int index = encoder.dequeueOutputBuffer(outputInfo, TIMEOUT_USEC);
                     if (index == MediaCodec.INFO_TRY_AGAIN_LATER) {
 //                        mRunning = false;
-                        Log.d(TAG, "run: INFO_TRY_AGAIN_LATER");
+//                        Log.d(TAG, "run: INFO_TRY_AGAIN_LATER");
                     } else if (index == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
                         outputBuffers = encoder.getOutputBuffers();
                     } else if (index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {

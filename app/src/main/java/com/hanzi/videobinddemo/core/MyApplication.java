@@ -3,8 +3,6 @@ package com.hanzi.videobinddemo.core;
 import android.app.Application;
 import android.content.Context;
 
-import com.hanzi.videobinddemo.MyUncaughtExceptionHandler;
-
 
 /**
  * Created by qqche_000 on 2017/8/6.
@@ -23,7 +21,7 @@ public class MyApplication extends Application {
 //        SharedPreferencesUtil.getInstance(this,"VideoEditor");
 //        screenWidth = mDisplayMetrics.widthPixels;
 //        screenHeight = mDisplayMetrics.heightPixels;
-        MyUncaughtExceptionHandler.getInstance().init(this);
+//        MyUncaughtExceptionHandler.getInstance().init(this);
 
     }
 

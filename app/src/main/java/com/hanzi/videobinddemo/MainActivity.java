@@ -21,7 +21,7 @@ public class MainActivity extends AppCompatActivity {
 
     private MediaBind mediaBind;
     private static String PATH = Environment.getExternalStorageDirectory().getAbsolutePath();
-    private String finalinputFilePath1 = PATH + "/1/ice.mp4";
+//    private String finalinputFilePath1 = PATH + "/1/ice.mp4";
     private String finalinputFilePath2 = PATH + "/1/hei.mp4";
     private String bgmPath = PATH + "/1/Christmas_Story.aac";
 
@@ -49,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
                 MediaBindInfo mediaBindInfo = new MediaBindInfo();
 
                 List<MediaBean> mediaBeans = new ArrayList<>();
-                mediaBeans.add(new MediaBean(finalinputFilePath1, 0));
+//                mediaBeans.add(new MediaBean(finalinputFilePath1, 0));
                 mediaBeans.add(new MediaBean(finalinputFilePath2, 0));
 
                 mediaBindInfo.setMediaBeans(mediaBeans);

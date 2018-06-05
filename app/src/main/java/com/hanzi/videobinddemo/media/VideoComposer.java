@@ -7,7 +7,6 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
 
-import com.hanzi.videobinddemo.bean.VideoInfo;
 import com.hanzi.videobinddemo.filter.AFilter;
 import com.hanzi.videobinddemo.media.Utils.MediaFileMuxer;
 import com.hanzi.videobinddemo.media.Utils.decoder.VideoDecoder;
@@ -38,10 +37,10 @@ public class VideoComposer {
     private MediaFileMuxer mediaFileMuxer;
     private long mDuration = 0;
 
-    private int mFrameRate = 15, mOutWidth = 0, mOutHeight = 0;
+    private int mFrameRate = 15, mOutWidth = -1, mOutHeight = -1;
 
-    private HandlerThread mergeThread;
-    private Handler mergeHandler;
+    private HandlerThread decoderThread;
+    private Handler decoderHandler;
 
     private boolean beStop = false;
 
@@ -64,17 +63,27 @@ public class VideoComposer {
         Log.i(TAG, String.format("VideoComposer:  mOutWidth %d, mOutHeight %d outFilePath %s",
                 mOutWidth, mOutHeight, outFilePath));
 
+        mReadBuf = ByteBuffer.allocate(1048576);
+
         mediaFileMuxer = new MediaFileMuxer(outFilePath);
 
         for (MediaBean bean : mMediaBeans) {
             VideoExtractor extractor = new VideoExtractor(bean.getUrl(), bean.getStartTimeUs(), bean.getEndTimeUs());
             mMediaExtractors.add(extractor);
             mDuration += extractor.getDurationUs();
+            if (bean.getVideoWidth()==0) {
+                bean.setVideoWidth(extractor.getWidth());
+            }
+            if (bean.getVideoHeight()==0) {
+                bean.setVideoHeight(extractor.getHeight());
+            }
+            bean.setRate(extractor.getFrameRate());
+
         }
 
-        mergeThread = new HandlerThread("merge");
-        mergeThread.start();
-        mergeHandler = new Handler(mergeThread.getLooper());
+        decoderThread = new HandlerThread("decoder");
+        decoderThread.start();
+        decoderHandler = new Handler(decoderThread.getLooper());
     }
 
     public void setVideoComposerCallBack(VideoComposerCallBack videoComposerCallBack) {
@@ -83,16 +92,16 @@ public class VideoComposer {
 
     public void start() {
         startMuxer();
-        mergeHandler.post(new Runnable() {
-            @Override
-            public void run() {
+//        decoderHandler.post(new Runnable() {
+//            @Override
+//            public void run() {
                 startVideoEdit();//还没有完善，暂时每一个视频都进行编码解码的操作吧
                 if (isEditOk()) {
                     videoComposerCallBack.onh264Path();
                 }
 //                startMerge();
-            }
-        });
+//            }
+//        });
     }
 
     private boolean isEditOk() {
@@ -150,20 +159,41 @@ public class VideoComposer {
      * @param startTimeUs
      * @param endTimeUs
      */
-    private void oneVideoEdit(int index, VideoExtractor videoExtractor, long firstSampleTime, long durationUs, long startTimeUs, long endTimeUs) {
+    private void oneVideoEdit(int index, final VideoExtractor videoExtractor, final long firstSampleTime, final long durationUs, final long startTimeUs, long endTimeUs) {
         videoExtractor.seekTo(firstSampleTime + startTimeUs, SEEK_TO_PREVIOUS_SYNC);
+        int width =0,height =0,frameRate = 0;
+        if (mOutWidth == 0) {
+            width= videoExtractor.getWidth();
+        }else {
+            width =mOutWidth;
+        }
+
+
+        if (mOutHeight ==0) {
+            height = videoExtractor.getHeight();
+        }else {
+            height =mOutHeight;
+        }
+
+        frameRate= videoExtractor.getFrameRate();
+
 
         VideoEncoder encoder = new VideoEncoder();
-        openEncoder(index, encoder, mOutWidth, mOutHeight, mFrameRate);
+        openEncoder(index, encoder, width, height, frameRate);
+        Log.d(TAG, "oneVideoEdit: ");
+        final VideoDecoder decoder = new VideoDecoder();
+        openDecoder(index, decoder, videoExtractor, encoder, firstSampleTime, startTimeUs);
+
+        decoder.start();
         encoder.start();
 
-        VideoDecoder decoder = new VideoDecoder();
-        openDecoder(index, decoder, videoExtractor, encoder, firstSampleTime, startTimeUs);
-        decoder.start();
+        decoderHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                inputForDecoder(videoExtractor, firstSampleTime, durationUs, startTimeUs, decoder);
 
-        inputForDecoder(videoExtractor, firstSampleTime, durationUs, startTimeUs, decoder);
-
-
+            }
+        });
     }
 
     private void openEncoder(final int index, VideoEncoder encoder, int width, int height, int frameRate) {
@@ -247,27 +277,32 @@ public class VideoComposer {
 
     private void openDecoder(int index, VideoDecoder decoder, final VideoExtractor videoExtractor,
                              final VideoEncoder videoEncoder, long firstSampleTime, long startTimeUs) {
-        MediaFormat format = videoExtractor.getFormat();
-        VideoInfo videoInfo = new VideoInfo();
-        videoInfo.width = videoExtractor.getWidth();
-        videoInfo.height = videoExtractor.getHeight();
-        videoInfo.rotation = 0;
-        MediaBean mediaBean = mMediaBeans.get(index);
 
+        Log.d(TAG, "openDecoder: ");
+        MediaFormat format = videoExtractor.getFormat();
+//        VideoInfo videoInfo = new VideoInfo();
+//        videoInfo.width = videoExtractor.getWidth();
+//        videoInfo.height = videoExtractor.getHeight();
+//        videoInfo.rotation = 0;
+        MediaBean mediaBean = mMediaBeans.get(index);
+       
         decoder.open(mediaBean, mFilter, format, firstSampleTime, startTimeUs, new VideoDecoder.VideoDecodeCallBack() {
             @Override
             public void onInputBuffer() {
                 videoExtractor.advance();
+                Log.d(TAG, "onInputBuffer: ");
             }
 
             @Override
             public void onOutputBuffer(byte[] bytes) {
-
+                Log.d(TAG, "onOutputBuffer: length:"+bytes.length);
             }
 
             @Override
             public void onOutputBufferInfo(MediaCodec.BufferInfo bufferInfo) {
+                Log.d(TAG, "onOutputBufferInfo: "+bufferInfo);
                 videoEncoder.encoder(bufferInfo);
+
             }
 
             @Override
