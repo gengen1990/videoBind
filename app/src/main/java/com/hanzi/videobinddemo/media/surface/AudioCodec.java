@@ -37,6 +37,8 @@ public class AudioCodec {
 
     private static Handler handler = new Handler(Looper.getMainLooper());
 
+    private static boolean[] isStartEncode = {false};
+
     /**
      * 混音从视频和音频获取pcm数据
      *
@@ -140,7 +142,7 @@ public class AudioCodec {
             public void run() {
                 boolean isEnd = false;
                 while (!isEnd) {
-                    Log.e(TAG, "isDecoderOver " + isDecoderOver[0] + "--" + isDecoderOver[1]);
+                    Log.e(TAG, "isDecoderOver " + isDecoderOver[0] +  "--" + isDecoderOver[1]);
                     if (isDecoderOver[0] && isDecoderOver[1]) {
                         ReSample reSample = new ReSample(Sample, path1, path2, pathSSRC).invoke();
                         File file1 = reSample.getFile1();
@@ -438,7 +440,7 @@ public class AudioCodec {
         }
         int value =0;
 
-        final boolean[] isStartEncode = {false};
+
         while (true) {
 
             for (int streamIndex = 0; streamIndex < fileSize; ++streamIndex) {
@@ -463,29 +465,30 @@ public class AudioCodec {
             byte[] mixBytes = nativeAudioMix(allAudioBytes, firstVol, secondVol);
             putPCMData(mixBytes);
             //mixBytes 就是混合后的数据
-            if (!isStartEncode[0]) {
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        isStartEncode[0] = true;
-                        try {
-                            Log.e("-------->", "start encode thread.....");
-                            Log.d(TAG, "run: PCM2AAC:" + sampleRate);
+                        if (!isStartEncode[0]) {
+                            isStartEncode[0]=true;
+                            try {
+                                Log.e("-------->", "start encode thread.....");
+                                Log.d(TAG, "run: PCM2AAC:" + sampleRate);
 
-                            PCM2AAC(sampleRate, "audio/mp4a-latm", outFile);
-                            if (listener != null) {
-                                listener.decodeOver();
-                            }
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            Log.e("-------->", " encode error-----------error------");
-                            if (listener != null) {
-                                listener.decodeFail();
+                                PCM2AAC(sampleRate, "audio/mp4a-latm", outFile);
+                                if (listener != null) {
+                                    listener.decodeOver();
+                                    isStartEncode[0] = false;
+                                }
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                                Log.e("-------->", " encode error-----------error------");
+                                if (listener != null) {
+                                    listener.decodeFail();
+                                }
                             }
                         }
                     }
                 }).start();
-            }
             boolean done = true;
             for (boolean streamEnd : streamDoneArray) {
                 if (!streamEnd) {
@@ -564,10 +567,12 @@ public class AudioCodec {
                     e.printStackTrace();
                 }
 
+
                 mediaEncode.releaseOutputBuffer(outputIndex, false);
                 outputIndex = mediaEncode.dequeueOutputBuffer(encodeBufferInfo, 10000);
             }
         }
+        Log.i(TAG, "PCM2AAC: end 1");
         mediaEncode.stop();
         mediaEncode.release();
         fos.close();

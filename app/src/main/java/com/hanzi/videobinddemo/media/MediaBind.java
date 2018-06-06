@@ -8,10 +8,7 @@ import android.util.Log;
 import com.hanzi.videobinddemo.bean.EffectInfo;
 import com.hanzi.videobinddemo.media.Variable.MediaBean;
 import com.hanzi.videobinddemo.media.Variable.MediaBindInfo;
-import com.hanzi.videobinddemo.media.surface.AudioCodec;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -77,6 +74,8 @@ public class MediaBind {
     }
 
     public int start() {
+//        final String mPcmInFilePath = Constants.getPath("audio/", "audio" + "pcmSrc" + 0 + ".pcm");
+//        audioComposer.encoderPcm(mPcmInFilePath,44100,0);
         startAudio();
 //        startVideo();
         startCombine();

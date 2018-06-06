@@ -5,6 +5,9 @@ import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.util.Log;
 
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -24,14 +27,22 @@ public class AudioEncoder {
 
     private Thread mOutputThread;
 
+    private boolean mEndOfStream = false;
+
     private long mCnt = 0;
 
     private AudioEncoderCallBack audioEncoderCallback;
 
     private boolean mRunning = false;
 
-    public int open(String tag, String encodeType, int sampleRate, int channelCount, int bitRate, int inputSize, AudioEncoderCallBack audioEncoderCallback) {
+    private FileOutputStream fos;
+    private BufferedOutputStream bos;
+
+    public int open(String tag, String audioOutPath,String encodeType, int sampleRate, int channelCount, int bitRate, int inputSize, AudioEncoderCallBack audioEncoderCallback) {
         try {
+            fos=new FileOutputStream(new File(audioOutPath));
+//             bos = new BufferedOutputStream(fos, inputSize);
+
             MediaFormat encodeFormat = MediaFormat.createAudioFormat(encodeType, sampleRate, channelCount);//mime type 采样率 声道数
             encodeFormat.setInteger(MediaFormat.KEY_BIT_RATE, bitRate);//比特率
             encodeFormat.setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC);
@@ -66,7 +77,9 @@ public class AudioEncoder {
     }
 
     public boolean encode(byte[] chunkPCM, boolean endOfStream) {
-
+        if (endOfStream) {
+            mEndOfStream = endOfStream;
+        }
         Log.d(TAG, "encode: ");
         int index = encoder.dequeueInputBuffer(TIMEOUT_USEC);
 
@@ -76,7 +89,7 @@ public class AudioEncoder {
             ByteBuffer inputBuffer = inputBuffers[index];
             inputBuffer.clear();
 
-            if (endOfStream) {
+            if (mEndOfStream) {
                 Log.d(TAG, "encode: endOfStream over:" + index);
                 encoder.queueInputBuffer(index, 0, 0, 0L, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
                 return false;
@@ -169,16 +182,22 @@ public class AudioEncoder {
 //            }
             mRunning = true;
             long lastStamp = -1;
+
+//            ByteBuffer outputBuffer;
+//            byte[] chunkAudio;
+//            int outBitSize;
+//            int outPacketSize;
+
             while (mRunning) {
                 try {
 
                     MediaCodec.BufferInfo outputInfo = new MediaCodec.BufferInfo();
                     int index = encoder.dequeueOutputBuffer(outputInfo, 1000);
-                    Log.d(TAG, "dequeueOutputBuffer: index:"+index);
+//                    Log.d(TAG, "dequeueOutputBuffer: index:"+index);
 
                     if (index == MediaCodec.INFO_TRY_AGAIN_LATER) {
 //                        mRunning = false;
-                        Log.d(TAG, "run: INFO_TRY_AGAIN_LATER");
+//                        Log.d(TAG,  "run: INFO_TRY_AGAIN_LATER");
                     } else if (index == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
                         outputBuffers = encoder.getOutputBuffers();
                         Log.d(TAG, "run: INFO_OUTPUT_BUFFERS_CHANGED");
@@ -190,14 +209,13 @@ public class AudioEncoder {
                     } else {
 
                         ByteBuffer outputData = outputBuffers[index];
-                        boolean done = (outputInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0;
+                        boolean done = (outputInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) == MediaCodec.BUFFER_FLAG_END_OF_STREAM;
                         if (done) {
                             Log.d(TAG, "run: BUFFER_FLAG_END_OF_STREAM:" +  done);
                             mRunning = false;
                             if (audioEncoderCallback!=null)
                                 audioEncoderCallback.encodeOver();
                         }
-
 
                         Log.d(TAG, "run: presentationTimeUs:" + outputInfo.presentationTimeUs);
 //                        if (outputInfo.presentationTimeUs == 0 && !done) {
@@ -208,16 +226,36 @@ public class AudioEncoder {
 
                         if (outputInfo.size != 0 && outputInfo.presentationTimeUs > 0) {
                             Log.d(TAG, "run: outputData.limit():" + outputData.limit());
-//                            Log.d(TAG, String.format("output: index %d size %d presentationTimeUs:%d", index, outputInfo.size, outputInfo.presentationTimeUs));
+                            Log.d(TAG, String.format("output: index %d size %d presentationTimeUs:%d", index, outputInfo.size, outputInfo.presentationTimeUs));
 //                            if (outputInfo.presentationTimeUs > lastStamp) {//为了避免有问题的数据
                             byte[] data = new byte[outputData.limit()];
                             outputData.get(data);
-                            if (audioEncoderCallback != null)
+                            if (audioEncoderCallback != null  )
                                 audioEncoderCallback.onOutputBuffer(data, outputInfo);
+
                             lastStamp = outputInfo.presentationTimeUs;
                             outputData.clear();
 //                            }
+
+//                            outBitSize=outputInfo.size;
+//                            outPacketSize=outBitSize+7;
+//                            outputBuffer = outputBuffers[index];//拿到输出Buffer
+//                            outputBuffer.position(outputInfo.offset);
+//                            outputBuffer.limit(outputInfo.offset + outBitSize);
+//                            chunkAudio = new byte[outPacketSize];
+//                            addADTStoPacket(chunkAudio, outPacketSize);//添加ADTS 代码后面会贴上
+//                            outputBuffer.get(chunkAudio, 7, outBitSize);//将编码得到的AAC数据 取出到byte[]中 偏移量offset=7 你懂得
+//                            outputBuffer.position(outputInfo.offset);
+//                            outputBuffer.clear();
+//                            try {
+//                                Log.i(TAG, "run: chunkAudio.length:"+chunkAudio.length);
+//                                fos.write(chunkAudio, 0, chunkAudio.length);//BufferOutputStream 将文件保存到内存卡中 *.aac
+//                                fos.flush();
+//                            } catch (IOException e) {
+//                                e.printStackTrace();
+//                            }
                         }
+                        Log.i(TAG, "run: releaseOutputBuffer");
                         encoder.releaseOutputBuffer(index, false);
                     }
                 } catch (Exception e) {
@@ -226,10 +264,32 @@ public class AudioEncoder {
                 }
             }
 //            stopThread();
-
-            Log.d(TAG, "video hardware decoder output thread exit!");
+            try {
+                fos.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            Log.d(TAG, "audio hardware decoder output thread exit!");
         }
     }
+
+//    /**
+//     * 写入ADTS头部数据
+//     */
+//    public static void addADTStoPacket(byte[] packet, int packetLen) {
+//        int profile = 2; // AAC LC
+//        int freqIdx = 4; // 44.1KHz
+//        int chanCfg = 2; // CPE
+//
+//        packet[0] = (byte) 0xFF;
+//        packet[1] = (byte) 0xF9;
+//        packet[2] = (byte) (((profile - 1) << 6) + (freqIdx << 2) + (chanCfg >> 2));
+//        packet[3] = (byte) (((chanCfg & 3) << 6) + (packetLen >> 11));
+//        packet[4] = (byte) ((packetLen & 0x7FF) >> 3);
+//        packet[5] = (byte) (((packetLen & 7) << 5) + 0x1F);
+//        packet[6] = (byte) 0xFC;
+//    }
+
 
     public interface AudioEncoderCallBack {
         void onInputBuffer();
@@ -238,4 +298,80 @@ public class AudioEncoder {
 
         void encodeOver();
     }
+
+//    public void PCM2AAC(int sampleRate, String encodeType, String outputFile, ByteContainer container) throws IOException {
+//        int inputIndex;
+//        ByteBuffer inputBuffer;
+//        int outputIndex;
+//        ByteBuffer outputBuffer;
+//        byte[] chunkAudio;
+//        int outBitSize;
+//        int outPacketSize;
+//        byte[] chunkPCM;
+//        //初始化编码器
+//        MediaFormat encodeFormat = MediaFormat.createAudioFormat(encodeType, sampleRate, 2);//mime type 采样率 声道数
+//        encodeFormat.setInteger(MediaFormat.KEY_BIT_RATE, 96000);//比特率
+//        encodeFormat.setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC);
+//        encodeFormat.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, 500*1024);
+//
+//        MediaCodec mediaEncode = MediaCodec.createEncoderByType(encodeType);
+//        mediaEncode.configure(encodeFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
+//        mediaEncode.start();
+//
+//        ByteBuffer[] encodeInputBuffers = mediaEncode.getInputBuffers();
+//        ByteBuffer[] encodeOutputBuffers = mediaEncode.getOutputBuffers();
+//        MediaCodec.BufferInfo encodeBufferInfo = new MediaCodec.BufferInfo();
+//
+//        //初始化文件写入流
+//        FileOutputStream fos = new FileOutputStream(new File(outputFile));
+//        BufferedOutputStream bos = new BufferedOutputStream(fos, 500*1024);
+//        Log.i(TAG, "PCM2AAC: container0:"+container.getSize());
+//        while (!container.isEmpty() ) {//|| !isDecodeOver
+//
+//            Log.d(TAG, "PCM2AAC: chunkPCMDataContainer:" + container.getSize());
+//            for (int i = 0; i < encodeInputBuffers.length - 1; i++) {
+//                chunkPCM = container.getData();//获取解码器所在线程输出的数据 代码后边会贴上
+//                if (chunkPCM == null) {
+//                    break;
+//                }
+//                inputIndex = mediaEncode.dequeueInputBuffer(-1);
+//                inputBuffer = encodeInputBuffers[inputIndex];
+//                inputBuffer.clear();//同解码器
+//                inputBuffer.limit(chunkPCM.length);
+//                inputBuffer.put(chunkPCM);//PCM数据填充给inputBuffer
+//                mediaEncode.queueInputBuffer(inputIndex, 0, chunkPCM.length, 0, 0);//通知编码器 编码
+//            }
+//
+//            outputIndex = mediaEncode.dequeueOutputBuffer(encodeBufferInfo, 10000);//同解码器
+//            while (outputIndex >= 0) {//同解码器
+//                outBitSize = encodeBufferInfo.size;
+//                outPacketSize = outBitSize + 7;//7为ADTS头部的大小
+//                outputBuffer = encodeOutputBuffers[outputIndex];//拿到输出Buffer
+//                outputBuffer.position(encodeBufferInfo.offset);
+//                outputBuffer.limit(encodeBufferInfo.offset + outBitSize);
+//                chunkAudio = new byte[outPacketSize];
+//                addADTStoPacket(chunkAudio, outPacketSize);//添加ADTS 代码后面会贴上
+//                outputBuffer.get(chunkAudio, 7, outBitSize);//将编码得到的AAC数据 取出到byte[]中 偏移量offset=7 你懂得
+//                outputBuffer.position(encodeBufferInfo.offset);
+//                try {
+//                    Log.i(TAG, "PCM2AAC: length:"+chunkAudio.length);
+//                    bos.write(chunkAudio, 0, chunkAudio.length);//BufferOutputStream 将文件保存到内存卡中 *.aac
+//                    bos.flush();
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
+//
+//                mediaEncode.releaseOutputBuffer(outputIndex, false);
+//                outputIndex = mediaEncode.dequeueOutputBuffer(encodeBufferInfo, 10000);
+//            }
+//        }
+//
+//
+//
+//        Log.i(TAG, "PCM2AAC: end");
+//        mediaEncode.stop();
+//        mediaEncode.release();
+//        bos.close();
+//        fos.close();
+//    }
 }

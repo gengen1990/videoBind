@@ -1,6 +1,5 @@
 package com.hanzi.videobinddemo.media;
 
-import android.media.MediaCodec;
 import android.media.MediaFormat;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -127,8 +126,10 @@ public class AudioMix {
             isEncoding = true;
             while (true) {
                 if (!byteContainer.isEmpty()) {
+                    Log.i(TAG, "run: encode false");
                     audioEncoder.encode(byteContainer.getData(), false);
                 }else {
+                    Log.i(TAG, "run: encode true");
                     audioEncoder.encode(null, true);
                     break;
                 }
@@ -226,57 +227,57 @@ public class AudioMix {
     }
 
     private void openEncoder(AudioEncoder audioEncoder, int sampleRate, int channelCount, int maxInputSize) {
-        audioEncoder.open("mixAudioEncoder","audio/mp4a-latm", sampleRate, channelCount, 96000, maxInputSize, new AudioEncoder.AudioEncoderCallBack() {
-            @Override
-            public void onInputBuffer() {
-
-            }
-
-            @Override
-            public void onOutputBuffer(byte[] data, MediaCodec.BufferInfo bufferInfo) {
-
-
-                ByteBuffer byteBuffer = ByteBuffer.allocate(data.length);
-                byteBuffer.put(data);
-                byteBuffer.flip();
-////                byteBuffer.get(datas);
-//                //添加头信息
-//                int outBitSize = bufferInfo.size;
-//                int outPacketSize = outBitSize + 7;//头文件长度为7
-//                byteBuffer.position(bufferInfo.offset);
-//                byteBuffer.limit(bufferInfo.offset + outBitSize);
-//                byte[] chunkAudio = new byte[outPacketSize];
-//                addADTStoPacket(chunkAudio, outPacketSize);
-//                byteBuffer.get(chunkAudio, 7, outBitSize);
-//                byteBuffer.position(bufferInfo.offset);
+//        audioEncoder.open("mixAudioEncoder","audio/mp4a-latm", sampleRate, channelCount, 96000, maxInputSize, new AudioEncoder.AudioEncoderCallBack() {
+//            @Override
+//            public Rvoid onInputBuffer() {
 //
-//                try {
-//                    bos.write(chunkAudio, 0, chunkAudio.length);//BufferOutputStream 将文件保存到内存卡中 *.aac
-//                    bos.flush();
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                }
-                Log.d(TAG, "onOutputBuffer: ");
-                mediaFileMuxer.writeSampleData(mOutAudioTrackIndex, byteBuffer, bufferInfo);
-            }
-
-            @Override
-            public void encodeOver() {
-                Log.d(TAG, "encodeOver: finish");
-                if (finishListener != null)
-                    finishListener.onFinish();
-                stop();
-
-//                try {
-//                    fos.close();
-//                    if (finishListener != null)
-//                        finishListener.onFinish();
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                }
-            }
-        });
-        audioEncoder.start();
+//            }
+//
+//            @Override
+//            public void onOutputBuffer(byte[] data, MediaCodec.BufferInfo bufferInfo) {
+//
+//
+//                ByteBuffer byteBuffer = ByteBuffer.allocate(data.length);
+//                byteBuffer.put(data);
+//                byteBuffer.flip();
+//////                byteBuffer.get(datas);
+////                //添加头信息
+////                int outBitSize = bufferInfo.size;
+////                int outPacketSize = outBitSize + 7;//头文件长度为7
+////                byteBuffer.position(bufferInfo.offset);
+////                byteBuffer.limit(bufferInfo.offset + outBitSize);
+////                byte[] chunkAudio = new byte[outPacketSize];
+////                addADTStoPacket(chunkAudio, outPacketSize);
+////                byteBuffer.get(chunkAudio, 7, outBitSize);
+////                byteBuffer.position(bufferInfo.offset);
+////
+////                try {
+////                    bos.write(chunkAudio, 0, chunkAudio.length);//BufferOutputStream 将文件保存到内存卡中 *.aac
+////                    bos.flush();
+////                } catch (IOException e) {
+////                    e.printStackTrace();
+////                }
+//                Log.d(TAG, "onOutputBuffer: ");
+//                mediaFileMuxer.writeSampleData(mOutAudioTrackIndex, byteBuffer, bufferInfo);
+//            }
+//
+//            @Override
+//            public void encodeOver() {
+//                Log.d(TAG, "encodeOver: finish");
+//                if (finishListener != null)
+//                    finishListener.onFinish();
+//                stop();
+//
+////                try {
+////                    fos.close();
+////                    if (finishListener != null)
+////                        finishListener.onFinish();
+////                } catch (IOException e) {
+////                    e.printStackTrace();
+////                }
+//            }
+//        });
+//        audioEncoder.start();
     }
 
     /**
