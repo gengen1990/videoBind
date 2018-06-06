@@ -90,8 +90,6 @@ public class AudioComposer {
      */
     private boolean isBgm;
 
-    private final int RESAMPLE = 0;
-
     static ExecutorService executorService = Executors.newFixedThreadPool(4);
 
     String suffix = "audio";
@@ -411,8 +409,6 @@ public class AudioComposer {
     private void ReSamplingByDecoder(int index, final AudioExtractor audioExtractor, long firstSampleTime, long durationUs,
                                      long startTimeUs, long endTimeUs) {
 
-//        initResampleHandler(index);
-
         AudioDecoder decoder = new AudioDecoder();
         openDecoder(index, decoder, audioExtractor);
 
@@ -420,45 +416,6 @@ public class AudioComposer {
         inputForDecoder2(audioExtractor, firstSampleTime, durationUs, startTimeUs, decoder);
     }
 
-//    private void initResampleHandler(final int index) {
-//        resamplerThread = new HandlerThread("resample");
-//        resamplerThread.start();
-//
-//        resamplerHandler = new Handler(resamplerThread.getLooper()) {
-//            @Override
-//            public void handleMessage(Message msg) {
-////                if (msg.what == RESAMPLE) {
-//                String inputFilePath = msg.getData().getString("inputFilePath");
-//                String outputFilePath = msg.getData().getString("outputFilePath");
-//                int inputSampleRate = msg.getData().getInt("inputSampleRate");
-//                int outSampleRate = msg.getData().getInt("outSampleRate");
-//                int channelCount = msg.getData().getInt("channelCount");
-//                int maxInputSize = msg.getData().getInt("maxInputSize");
-//
-//                Log.d(TAG, String.format("initResampleHandler handleMessage" +
-//                                "index %d, inputFilePath %s, outputFilePath %s,inputSampleRate %d,outSampleRate %d ,channelCount %d, maxInputSize %d"
-//                        , index, inputFilePath, outputFilePath, inputSampleRate, outSampleRate, channelCount, maxInputSize));
-//
-//                resample(inputSampleRate, outSampleRate, inputFilePath, outputFilePath);
-//
-//                if (!isMix) {
-//                    pcmContainer = new ByteContainer();
-//                    getOutputPCMData(outputFilePath);
-//
-//                    AudioEncoder audioEncoder = new AudioEncoder();
-//                    openEncoder(index, audioEncoder, outSampleRate, channelCount, maxInputSize);
-//                    audioEncoder.start();
-//                    inputForEncoder(audioEncoder);
-//
-//                } else {
-//                    pcmPathHashMap.put(index, outputFilePath);
-//                    resampleIndex.put(index, true);
-//                }
-//
-////                }
-//            }
-//        };
-//    }
 
     private void inputForEncoder(int index, AudioEncoder audioEncoder) {
         while (true) {
@@ -539,12 +496,12 @@ public class AudioComposer {
 
                 @Override
                 public void onOutputBuffer(byte[] bytes) {
-//                    try {
-//                        fos1.write(bytes);
-//                        fos1.flush();
-//                    } catch (IOException e) {
-//                        e.printStackTrace();
-//                    }
+                    try {
+                        fos1.write(bytes);
+                        fos1.flush();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
 
                 @Override

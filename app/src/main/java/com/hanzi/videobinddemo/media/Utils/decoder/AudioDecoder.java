@@ -133,10 +133,6 @@ public class AudioDecoder {
         @Override
         public void run() {
             Log.i(TAG, "video hardware decoder output thread running");
-//            if (mRunning) {
-//                Log.e(TAG, "video hardware decoder start again!");
-//                return;
-//            }
             mRunning = true;
 
             int idx;
