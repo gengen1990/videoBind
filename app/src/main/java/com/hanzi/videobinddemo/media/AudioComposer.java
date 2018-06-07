@@ -49,7 +49,7 @@ public class AudioComposer {
 
     private ByteBuffer mReadBuf;
 
-    int mOutAudioTrackIndex = -1;
+    private int mOutAudioTrackIndex = -1;
     private long ptsOffset = 0L;
 
     private HandlerThread resamplerThread;
@@ -125,13 +125,13 @@ public class AudioComposer {
         mergeHandler = new Handler(mergeThread.getLooper());
     }
 
-    public void start(int sampleRate, int channelCount, final boolean isMix) {
-        this.outSampleRate = sampleRate;
+    public void start(int outSampleRate, int channelCount, final boolean isMix) {
+        this.outSampleRate = outSampleRate;
         this.outChannelCount = channelCount;
 
         this.isMix = isMix;
 
-        Log.d(TAG, "start: outSampleRate:" + outSampleRate);
+        Log.d(TAG, "start: outSampleRate:" + this.outSampleRate);
         Log.d(TAG, "start: channelCount:" + channelCount);
         startMuxer();
         mergeHandler.post(new Runnable() {
@@ -185,17 +185,13 @@ public class AudioComposer {
             if (endTimeUs != -1 && endTimeUs < durationUs) {
                 durationUs = endTimeUs - startTimeUs;
             }
-            Log.d(TAG, "startResample: audioExtractor.toString():" + audioExtractor.toString());
-            Log.d(TAG, "startResample: firstSampleTime:" + firstSampleTime);
-            Log.d(TAG, "startResample: startTimeUs:" + startTimeUs);
-            Log.d(TAG, "startResample: endtime:" + endTimeUs);
-            Log.d(TAG, "startResample: durationUs:" + durationUs);
+
+            Log.i(TAG, String.format("startMerge: firstSampleTime:%d, startTimeUs:%d, endtime:%d, durationUs:%d"
+                    , firstSampleTime, startTimeUs, endTimeUs, durationUs));
 
             if (resampleIndex.containsKey(index)) {
                 mergeByteBuffer(resampleDataHashMap.get(index));
-                Log.d(TAG, "startMerge: mergeByteBuffer");
             } else {
-                Log.d(TAG, "startMerge: mergeWithoutResample");
                 mergeWithoutResample(audioExtractor, firstSampleTime, durationUs, startTimeUs, endTimeUs);
             }
 
@@ -591,6 +587,7 @@ public class AudioComposer {
 
     /**
      * 开启音频编码器
+     *
      * @param index
      * @param audioEncoder
      * @param sampleRate

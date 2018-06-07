@@ -74,8 +74,6 @@ public class MediaBind {
     }
 
     public int start() {
-//        final String mPcmInFilePath = Constants.getPath("audio/", "audio" + "pcmSrc" + 0 + ".pcm");
-//        audioComposer.encoderPcm(mPcmInFilePath,44100,0);
         startAudio();
 //        startVideo();
         startCombine();
@@ -109,7 +107,7 @@ public class MediaBind {
     }
 
     private void initAudioComposer(MediaBindInfo bindInfo) {
-        audioComposer = new AudioComposer("audioComposer",bindInfo.getMediaBeans(), bindInfo.getDuration(), audioOutFilePath, false);
+        audioComposer = new AudioComposer("audioComposer", bindInfo.getMediaBeans(), bindInfo.getDuration(), audioOutFilePath, false);
         audioComposer.setAudioComposerCallBack(new AudioComposer.AudioComposerCallBack() {
             @Override
             public void onPcmPath(String path) {
@@ -142,7 +140,7 @@ public class MediaBind {
     private void initBgmComposer(MediaBindInfo info) {
         if (info.getBgm() == null) return;
         long mDuration = audioComposer.getDurationUs();
-        Log.d(TAG, "initBgmComposer: mDuration:"+mDuration);
+        Log.d(TAG, "initBgmComposer: mDuration:" + mDuration);
         MediaBean bgm = info.getBgm();
 
         if (mDuration <= 0) {
@@ -153,7 +151,7 @@ public class MediaBind {
         List<MediaBean> mediaBeans = new ArrayList<>();
         setMediaBeansCount(mDuration, bgm, mediaBeans);
 
-        bgmComposer = new AudioComposer("bgmComposer",mediaBeans, mDuration, bgmOutFilePath, true);
+        bgmComposer = new AudioComposer("bgmComposer", mediaBeans, mDuration, bgmOutFilePath, true);
         bgmComposer.setAudioComposerCallBack(new AudioComposer.AudioComposerCallBack() {
             @Override
             public void onPcmPath(String path) {
@@ -199,28 +197,26 @@ public class MediaBind {
         });
     }
 
+    /**
+     * 开始对音频进行处理
+     */
     private void startAudio() {
         //获取音频中最小的采样率
-        int audioSampleRate = 44100;
-        if (bgmComposer != null) {
-            audioSampleRate = audioComposer.getMinSampleRate() > bgmComposer.getMinSampleRate() ?
-                    bgmComposer.getMinSampleRate() : audioComposer.getMinSampleRate();
+        int outSampleRate = getAudioMinSampleRate();
 
-            Log.d(TAG, "start: audioSampleRate bgm:" + audioSampleRate);
-            audioComposer.start(audioSampleRate, 2, true);
-            bgmComposer.start(audioSampleRate, 2, true);
+        if (bgmComposer != null) {
+            audioComposer.start(outSampleRate, 2, true);
+            bgmComposer.start(outSampleRate, 2, true);
         } else {
-            audioSampleRate = audioComposer.getMinSampleRate();
-            audioComposer.start(audioSampleRate, 2, false);
-            Log.d(TAG, "start: audioSampleRate:" + audioSampleRate);
+            audioComposer.start(outSampleRate, 2, false);
         }
 
         audioMixHandler.post(new Runnable() {
             @Override
-            public void run() { 
+            public void run() {
                 while (true) {
                     if (indexPcmMixOk[0] && indexPcmMixOk[1]) {
-                        audioMix.open(pcmMixPaths, audioMixFilePath,audioComposer.getFormat(), audioComposer.getMinSampleRate(), audioComposer.getChannelCount(), audioComposer.getMaxInputSize());
+                        audioMix.open(pcmMixPaths, audioMixFilePath, audioComposer.getFormat(), audioComposer.getMinSampleRate(), audioComposer.getChannelCount(), audioComposer.getMaxInputSize());
                         audioMix.start();
                         audioMix.setOnFinishListener(new AudioMix.FinishListener() {
                             @Override
@@ -235,6 +231,23 @@ public class MediaBind {
                 }
             }
         });
+    }
+
+    /**
+     * 获取 最小音频的采样率
+     *
+     * @return
+     */
+    private int getAudioMinSampleRate() {
+        int audioSampleRate = 44100;
+        if (bgmComposer != null) {
+            audioSampleRate = audioComposer.getMinSampleRate() > bgmComposer.getMinSampleRate() ?
+                    bgmComposer.getMinSampleRate() : audioComposer.getMinSampleRate();
+        } else {
+            audioSampleRate = audioComposer.getMinSampleRate();
+        }
+        Log.d(TAG, "start: audioSampleRate bgm:" + audioSampleRate);
+        return audioSampleRate;
     }
 
     private void startVideo() {
@@ -260,9 +273,9 @@ public class MediaBind {
             for (int i = 0; i < count; i++) {
                 mediaBeans.add(bgm.clone());
             }
-            Log.d(TAG, "setMediaBeansCount: count:"+count);
+            Log.d(TAG, "setMediaBeansCount: count:" + count);
 
-            endTime =0;// mDuration % bgm.getDuration();
+            endTime = 0;// mDuration % bgm.getDuration();
             Log.d(TAG, "setMediaBeansCount: endTime:" + endTime);
             if (endTime != 0) {
                 MediaBean mediaBean = bgm.clone();
