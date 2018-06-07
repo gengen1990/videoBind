@@ -102,7 +102,6 @@ public class MediaBind {
         audioMixHandlerThread = new HandlerThread("audioMix");
         audioMixHandlerThread.start();
         audioMixHandler = new Handler(audioMixHandlerThread.getLooper());
-
         audioMix = new AudioMix();
     }
 
@@ -113,9 +112,7 @@ public class MediaBind {
             public void onPcmPath(String path) {
 //                indexPcmMixOk[0] = true;
                 pcmMixPaths[0] = path;
-
             }
-
             @Override
             public void onFinishWithoutMix() {
                 indexVideoAudioOk[0] = true;

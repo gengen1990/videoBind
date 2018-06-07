@@ -5,9 +5,6 @@ import android.media.MediaFormat;
 import android.os.Build;
 import android.util.Log;
 
-import com.hanzi.videobinddemo.media.Utils.extractor.AudioExtractor;
-
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -31,17 +28,10 @@ public class AudioDecoder {
 
     private Thread mOutputThread;
 
-    private long mFirstSampleTime, mStartTimeUs;
-
-
     private AudioDecodeCallBack audioDecodeCallBack;
-    private FileOutputStream fos1;
 
-    public int open(MediaFormat trackFormat,String pcmInFilePath, AudioDecodeCallBack audioDecodeCallBack) {
-//        MediaFormat trackFormat = extractor.getTrackFormat(audioTrack);
-
+    public int open(MediaFormat trackFormat, AudioDecodeCallBack audioDecodeCallBack) {
         try {
-            fos1= new FileOutputStream(pcmInFilePath);
             decoder = MediaCodec.createDecoderByType(trackFormat.getString(MediaFormat.KEY_MIME));
             decoder.configure(trackFormat, null, null, 0);
             this.audioDecodeCallBack = audioDecodeCallBack;
@@ -89,45 +79,30 @@ public class AudioDecoder {
             ByteBuffer inputBuffer = inputBuffers[index];
             inputBuffer.clear();
 
-            int sampleSize = audioDecodeCallBack.putInputData(inputBuffer);
-            long sampleTime = audioDecodeCallBack.getPresentationTimeUs();
+            int size = 0;
+            long presentationTimeUs = 0;
+            if (audioDecodeCallBack != null) {
+                size = audioDecodeCallBack.putInputData(inputBuffer);
+                presentationTimeUs = audioDecodeCallBack.getPresentationTimeUs();
+            }
 
-            inputInfo.offset = 0;
-            inputInfo.size = sampleSize;
-            inputInfo.flags = MediaCodec.BUFFER_FLAG_SYNC_FRAME;
-            inputInfo.presentationTimeUs = sampleTime;
-            decoder.queueInputBuffer(index, inputInfo.offset, sampleSize, inputInfo.presentationTimeUs, 0);
-            audioDecodeCallBack.onInputBuffer();
-            Log.d(TAG, String.format("decode: inputInfo: size %d presentationTimeUs %d ", sampleSize, sampleTime));
+            if (size >= 0) {
+                inputInfo.offset = 0;
+                inputInfo.size = size;
+                inputInfo.flags = 0;
+                inputInfo.presentationTimeUs = presentationTimeUs;
+                decoder.queueInputBuffer(index, inputInfo.offset, inputInfo.size, inputInfo.presentationTimeUs, inputInfo.flags);
+                if (audioDecodeCallBack != null)
+                    audioDecodeCallBack.onInputBuffer();
 
-            return true;
-        }
-        return true;
-    }
-
-    public boolean decode(AudioExtractor audioExtractor, long firstSampleTime, long durationUs, long startTimeUs) {
-        mFirstSampleTime = firstSampleTime;
-        mStartTimeUs = startTimeUs;
-        int index = decoder.dequeueInputBuffer(TIMEOUT_USEC);
-        if (index >= 0) {
-            ByteBuffer inputBuffer = inputBuffers[index];
-            inputBuffer.clear();
-            int readSampleData = audioExtractor.readSampleData(inputBuffer, 0);
-            long dur = audioExtractor.getSampleTime() - firstSampleTime - startTimeUs;
-            Log.d(TAG, "startAudioCodec: dur:" + dur);
-            if ((dur < durationUs) && readSampleData > 0) {
-                decoder.queueInputBuffer(index, 0, readSampleData, audioExtractor.getSampleTime(), 0);
-//                audioDecodeCallBack.onInputBuffer();
-                audioExtractor.advance();
+                Log.d(TAG, String.format("decode: inputInfo: size %d presentationTimeUs %d ", size, presentationTimeUs));
                 return true;
             } else {
-                decoder.queueInputBuffer(index, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
                 return false;
             }
         }
         return true;
     }
-
 
     private final class CDecoderRunnable implements Runnable {
         @Override
@@ -144,7 +119,6 @@ public class AudioDecoder {
                     if (idx == MediaCodec.INFO_TRY_AGAIN_LATER) {
                         /**没有可用的解码器output*/
                         Log.d(TAG, "run: INFO_TRY_AGAIN_LATER");
-//                        mRunning = false;
                     } else if (idx == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
                         outputBuffers = decoder.getOutputBuffers();
                     } else if (idx == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
@@ -170,14 +144,12 @@ public class AudioDecoder {
 
                         //callback send the buffer
 
-//                        audioDecodeCallBack.onOutputBuffer(chunkPCM);
+                        if (audioDecodeCallBack != null)
+                            audioDecodeCallBack.onOutputBuffer(chunkPCM);
 //                        }
-                        fos1.write(chunkPCM);
-                        fos1.flush();
 
                         decoder.releaseOutputBuffer(idx, false);
                         if ((outputInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-                            //callback over
                             stop();
                             mRunning = false;
                         }
@@ -188,25 +160,21 @@ public class AudioDecoder {
                     break;
                 }
             }
-            try {
-                fos1.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
             audioDecodeCallBack.decodeOver();
             Log.i(TAG, "audio hardware decoder output thread exit!");
         }
     }
 
     public interface AudioDecodeCallBack {
+
+        int putInputData(ByteBuffer byteBuffer);
+
+        long getPresentationTimeUs();
+
         void onInputBuffer();
 
         void onOutputBuffer(byte[] bytes);
 
         void decodeOver();
-
-        int putInputData(ByteBuffer byteBuffer);
-
-        long getPresentationTimeUs();
     }
 }
