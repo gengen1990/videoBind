@@ -23,7 +23,7 @@ import static android.media.MediaExtractor.SEEK_TO_PREVIOUS_SYNC;
 
 /**
  * Created by gengen on 2018/5/22.
- * 视频合成
+ * 视频拼接+添加效果
  */
 
 public class VideoComposer {

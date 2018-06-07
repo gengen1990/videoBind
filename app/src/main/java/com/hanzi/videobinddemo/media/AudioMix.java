@@ -20,11 +20,12 @@ import java.util.Arrays;
 
 /**
  * Created by gengen on 2018/5/25.
+ * 音频 混合器
  */
 
 public class AudioMix {
     private final static String TAG = "AudioMix";
-//    private String[] inPcmPaths = new String[2];
+    //    private String[] inPcmPaths = new String[2];
     private File[] inPcmFiles = new File[2];
     private String outAACPath = "";
     private boolean isEncoding = false;
@@ -41,23 +42,19 @@ public class AudioMix {
     private MediaFormat mediaFormat;
 
     private static String PATH = Environment.getExternalStorageDirectory().getAbsolutePath();
-
-//    private ByteBuffer mReadBuf;
-
     private int mOutAudioTrackIndex;
-//    private FileOutputStream fos;
-//    private BufferedOutputStream bos;
+
+    private boolean beStop = false;
+
+    private boolean beStopOver = false;
 
     private FinishListener finishListener;
 
     public int open(String[] inPcmPaths, String outAACPath, MediaFormat mediaFormat, int sampleRate, int channelCount, int maxInputSize) {
-//        this.inPcmPaths = inPcmPaths;
         this.outAACPath = outAACPath;
         this.sampleRate = sampleRate;
         this.mediaFormat = mediaFormat;
         byteContainer = new ByteContainer();
-
-//        mReadBuf = ByteBuffer.allocate(1048576);
 
         for (int i = 0; i < inPcmPaths.length; i++) {
             inPcmFiles[i] = new File(inPcmPaths[i]);
@@ -72,15 +69,36 @@ public class AudioMix {
         encodeHandlerThread.start();
         encoderHandler = new Handler(encodeHandlerThread.getLooper());
         mediaFileMuxer = new MediaFileMuxer(outAACPath);
-//        try {
-//            fos = new FileOutputStream(new File(outAACPath));
-//            bos = new BufferedOutputStream(fos, 8192);//500 * 1024
-//        } catch (FileNotFoundException e) {
-//            e.printStackTrace();
-//        }
-
         return 0;
     }
+
+    private void openEncoder(AudioEncoder audioEncoder, int sampleRate, int channelCount, int maxInputSize) {
+        audioEncoder.open("mixAudioEncoder", "audio/mp4a-latm", sampleRate, channelCount, 96000, maxInputSize, new AudioEncoder.AudioEncoderCallBack() {
+            @Override
+            public void onInputBuffer() {
+
+            }
+
+            @Override
+            public void onOutputBuffer(byte[] data, MediaCodec.BufferInfo bufferInfo) {
+                ByteBuffer byteBuffer = ByteBuffer.allocate(data.length);
+                byteBuffer.put(data);
+                byteBuffer.flip();
+
+                mediaFileMuxer.writeSampleData(mOutAudioTrackIndex, byteBuffer, bufferInfo);
+            }
+
+            @Override
+            public void encodeOver() {
+                if (finishListener != null)
+                    finishListener.onFinish();
+                beStopOver = true;
+                stop();
+            }
+        });
+        audioEncoder.start();
+    }
+
 
     /**
      * 根据采样率重新设置 format
@@ -108,7 +126,7 @@ public class AudioMix {
     public int start() {
         try {
             startMuxer();
-             String mixPath = PATH + "/1/audioMixWithNoMuxer.aac";
+            String mixPath = PATH + "/1/audioMixWithNoMuxer.aac";
             pcmMix(inPcmFiles, mixPath, 1, 1, sampleRate);
             encoderHandler.post(audioMixEncodeInputRunnable);
         } catch (IOException e) {
@@ -118,19 +136,23 @@ public class AudioMix {
     }
 
     public int stop() {
-        stopMuxer();
-        audioEncoder.stop();
+        beStop = true;
+        while (true) {
+            if (beStopOver) {
+                stopMuxer();
+                break;
+            }
+        }
         return 0;
     }
 
     private Runnable audioMixEncodeInputRunnable = new Runnable() {
         @Override
         public void run() {
-//            isEncoding = true;
             while (true) {
-                if (!byteContainer.isEmpty()) {
+                if (!byteContainer.isEmpty() && (!beStop)) {
                     audioEncoder.encode(byteContainer.getData(), false);
-                }else {
+                } else {
                     audioEncoder.encode(null, true);
                     break;
                 }
@@ -169,18 +191,14 @@ public class AudioMix {
         }
 
         int max = 0;
-        int index = 0;
         for (int i = 0; i < audioFileStreams.length; i++) {
             if (availables[i] > max) {
                 max = availables[i];
-                index = i;
             }
         }
-        int value = 0;
 
         while (true) {
             for (int streamIndex = 0; streamIndex < fileSize; ++streamIndex) {
-
                 inputStream = audioFileStreams[streamIndex];
                 if (!streamDoneArray[streamIndex] && (inputStream.read(buffer)) != -1) {
                     allAudioBytes[streamIndex] = Arrays.copyOf(buffer, buffer.length);
@@ -188,6 +206,7 @@ public class AudioMix {
                     streamDoneArray[streamIndex] = true;
                     allAudioBytes[streamIndex] = new byte[8 * 1024];
                 }
+                Log.i(TAG, "pcmMix: ");
             }
 
             byte[] mixBytes = nativeAudioMix(allAudioBytes, firstVol, secondVol);
@@ -200,9 +219,8 @@ public class AudioMix {
                     done = false;
                 }
             }
-            Log.d(TAG, "pcmMix: done："+done);
+            Log.d(TAG, "pcmMix: done：" + done);
             if (done) {
-//                isEncoding = false;
                 Log.d(TAG, "pcmMix: isEncoding false");
                 break;
             }
@@ -225,43 +243,6 @@ public class AudioMix {
 
         return AudioJniUtils.audioMix(allAudioBytes[0], allAudioBytes[1], realMixAudio, firstVol, secondVol);
     }
-
-    private void openEncoder(AudioEncoder audioEncoder, int sampleRate, int channelCount, int maxInputSize) {
-        audioEncoder.open("mixAudioEncoder","audio/mp4a-latm", sampleRate, channelCount, 96000, maxInputSize, new AudioEncoder.AudioEncoderCallBack() {
-            @Override
-            public void onInputBuffer() {
-
-            }
-
-            @Override
-            public void onOutputBuffer(byte[] data, MediaCodec.BufferInfo bufferInfo) {
-                ByteBuffer byteBuffer = ByteBuffer.allocate(data.length);
-                byteBuffer.put(data);
-                byteBuffer.flip();
-
-                Log.d(TAG, "onOutputBuffer: ");
-                mediaFileMuxer.writeSampleData(mOutAudioTrackIndex, byteBuffer, bufferInfo);
-            }
-
-            @Override
-            public void encodeOver() {
-                Log.d(TAG, "encodeOver: finish");
-                if (finishListener != null)
-                    finishListener.onFinish();
-                stop();
-
-//                try {
-//                    fos.close();
-//                    if (finishListener != null)
-//                        finishListener.onFinish();
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                }
-            }
-        });
-        audioEncoder.start();
-    }
-
 
     public void setOnFinishListener(FinishListener finishListener) {
         this.finishListener = finishListener;

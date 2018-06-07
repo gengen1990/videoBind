@@ -31,9 +31,6 @@ public class AudioExtractor extends MediaExtractor {
             channelCount = Integer.parseInt(MuxerUtils.getValue(format.toString(), "channel-count"));
             durationUs = Long.parseLong(MuxerUtils.getValue(format.toString(),"durationUs"));
             maxInputSize = Integer.parseInt(MuxerUtils.getValue(format.toString(),"max-input-size"));
-//            Log.d(TAG, "setInfo: durationUs:"+durationUs);
-//            Log.d(TAG, "setInfo: sample-rate:"+sampleRate);
-
             Log.d(TAG, String.format("audioExtractor setInfo:  sampleRate %d, channelCount %d durationUs %d, maxInputSize %d",
                     sampleRate, channelCount, durationUs, maxInputSize));
         }
@@ -55,9 +52,6 @@ public class AudioExtractor extends MediaExtractor {
     }
 
     public long getDurationUs() {
-//        Log.d(TAG, "getDurationUs: "+durationUs);
-//        Log.d(TAG, "getDurationUs: sampleRate:"+sampleRate);
-//        Log.d(TAG, "getDurationUs: channelCount:"+channelCount);
         return durationUs;
     }
 

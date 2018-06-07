@@ -38,7 +38,7 @@ public class AudioEncoder {
             MediaFormat encodeFormat = MediaFormat.createAudioFormat(encodeType, sampleRate, channelCount);//mime type 采样率 声道数
             encodeFormat.setInteger(MediaFormat.KEY_BIT_RATE, bitRate);//比特率
             encodeFormat.setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC);
-            encodeFormat.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, 8192);
+            encodeFormat.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, inputSize);
 
             encoder = MediaCodec.createEncoderByType(encodeType);
             encoder.configure(encodeFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
@@ -103,6 +103,7 @@ public class AudioEncoder {
         if (encoder != null) {
             encoder.stop();
             encoder.release();
+            encoder=null;
         }
         return 0;
     }
@@ -192,7 +193,7 @@ public class AudioEncoder {
                     break;
                 }
             }
-//            stop();
+            stop();
             Log.d(TAG, "audio hardware decoder output thread exit!");
         }
     }

@@ -55,8 +55,11 @@ public class AudioDecoder {
 
     public int stop() {
 //        stopThread();
-        decoder.stop();
-        decoder.release();
+        if (decoder!=null) {
+            decoder.stop();
+            decoder.release();
+            decoder = null;
+        }
         return 0;
     }
 
@@ -166,7 +169,7 @@ public class AudioDecoder {
 
                         decoder.releaseOutputBuffer(idx, false);
                         if ((outputInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-                            stop();
+                            audioDecodeCallBack.decodeOver();
                             mRunning = false;
                         }
 
@@ -176,7 +179,8 @@ public class AudioDecoder {
                     break;
                 }
             }
-            audioDecodeCallBack.decodeOver();
+            stop();
+
             Log.i(TAG, "audio hardware decoder output thread exit!");
         }
     }

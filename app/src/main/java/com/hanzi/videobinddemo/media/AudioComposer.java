@@ -33,7 +33,7 @@ import static android.media.MediaExtractor.SEEK_TO_PREVIOUS_SYNC;
 
 /**
  * Created by gengen on 2018/5/22.
- * 音频合成
+ * 音频合成+添加效果
  */
 
 public class AudioComposer {
@@ -52,13 +52,8 @@ public class AudioComposer {
     private int mOutAudioTrackIndex = -1;
     private long ptsOffset = 0L;
 
-    private HandlerThread resamplerThread;
     private HandlerThread mergeThread;
-    private HandlerThread audioEncoderThread;
-
-    private Handler resamplerHandler;
     private Handler mergeHandler;
-    private Handler audioEncoderHandler;
 
     private boolean isMix = false;
 
@@ -67,10 +62,26 @@ public class AudioComposer {
 
     private AudioComposerCallBack audioComposerCallBack;
 
+    /**
+     * 重采样后，未编码的数据
+     */
     private HashMap<Integer, ByteContainer> pcmContainer = new HashMap<>();
 
-
+    /**
+     * 重采样和编码后，需要传给合成器的数据
+     */
     private HashMap<Integer, ByteContainer> resampleDataHashMap = new HashMap<>();
+
+    /**
+     * 重采样时，需要的编码器
+     */
+    private HashMap<Integer, Boolean> encoderOverIndex = new HashMap<>();
+
+    /**
+     * 重采样时，需要的解码器
+     */
+    private HashMap<Integer, Boolean> decoderOverIndex = new HashMap<>();
+
     /**
      * 表示 重采样 的 对象的状态
      * integer表示需要重采样的
@@ -165,10 +176,40 @@ public class AudioComposer {
 
     public void stop() {
         beStop = true;
+        isResampleStopOk();
         stopMuxer();
         stopExtractor();
     }
 
+    /**
+     * 判断是否重采样中的编解码已经结束
+     */
+    private void isResampleStopOk() {
+        boolean isResampleStop = false;
+        while (!isResampleStop) {
+            int i = 0;
+            for (Integer key : encoderOverIndex.keySet()) {
+                if (!encoderOverIndex.get(key)) {
+                    break;
+                }
+                i++;
+            }
+            int j = 0;
+            for (Integer key : decoderOverIndex.keySet()) {
+                if (!decoderOverIndex.get(key)) {
+                    break;
+                }
+                j++;
+            }
+            if (i == encoderOverIndex.size() && j == decoderOverIndex.size()) {
+                isResampleStop = true;
+            }
+        }
+    }
+
+    /**
+     * 判断是否重采样已经完成
+     */
     private void isResampleOk() {
         boolean isResampleOk = false;
         while ((!isResampleOk) && (!beStop)) {
@@ -189,7 +230,7 @@ public class AudioComposer {
      * 开始拼接
      */
     private void startMerge() {
-        if (mMediaExtractors == null || mMediaExtractors.size() == 0) {
+        if (beStop && mMediaExtractors == null || mMediaExtractors.size() == 0) {
             return;
         }
         int index = 0;
@@ -377,7 +418,11 @@ public class AudioComposer {
         }
         int index = 0;
         //分别对需要进行 重采样的数据重新采样
+
         for (AudioExtractor audioExtractor : mMediaExtractors) {
+            if (beStop) {
+                return;
+            }
             long firstSampleTime = audioExtractor.getSampleTime();
             long durationUs = audioExtractor.getDurationUs();
             long startTimeUs = audioExtractor.getStartTimeUs();
@@ -451,6 +496,7 @@ public class AudioComposer {
                         e.printStackTrace();
                     }
                     encodePcm(audioExtractor, mPcmInFilePath, mPcmOutFilePath, 44100, index);
+                    decoderOverIndex.put(index,true);
                 }
 
                 @Override
@@ -463,6 +509,7 @@ public class AudioComposer {
                     return audioExtractor.getSampleTime();
                 }
             });
+            decoderOverIndex.put(index,false);
             decoder.start();
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -482,9 +529,13 @@ public class AudioComposer {
                                 long startTimeUs, AudioDecoder decoder) {
         boolean isRunning = true;
         while (isRunning) {
-            long now = audioExtractor.getSampleTime() - firstSampleTime - startTimeUs;
-
-            boolean beEndOfStream = (now >= durationUs || now == -1) && (!beStop);
+            long now;
+            if (!beStop) {
+                now = audioExtractor.getSampleTime() - firstSampleTime - startTimeUs;
+            }else {
+                now=-1;
+            }
+            boolean beEndOfStream = (now >= durationUs || now == -1) ;
             if (!decoder.decode(beEndOfStream)) {
                 isRunning = false;
             }
@@ -559,7 +610,7 @@ public class AudioComposer {
 
 
                     openEncoder(index, audioEncoder, outSampleRate, channelCount, maxInputSize);
-                    audioEncoder.start();
+
                     inputForEncoder(index, audioEncoder);
 
                 } else {
@@ -602,8 +653,11 @@ public class AudioComposer {
                 Log.d(TAG, "encodeOver: index:" + index);
                 resampleIndex.put(index, true);
                 audioEncoder.stop();
+                encoderOverIndex.put(index,true);
             }
         });
+        encoderOverIndex.put(index,false);
+        audioEncoder.start();
     }
 
     private void inputForEncoder(int index, AudioEncoder audioEncoder) {
@@ -611,7 +665,6 @@ public class AudioComposer {
             if (pcmContainer.get(index) != null && !pcmContainer.get(index).isStarted()) {
                 continue;
             }
-
 
             if (!pcmContainer.get(index).isEmpty() && (!beStop)) {
                 byte[] chunkPcm = pcmContainer.get(index).getData();
@@ -672,6 +725,7 @@ public class AudioComposer {
 
     public interface AudioComposerCallBack {
         void onPcmPath(String path);
+
         void onFinishWithoutMix();
     }
 

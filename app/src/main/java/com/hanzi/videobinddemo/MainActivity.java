@@ -17,7 +17,7 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    private Button button;
+    private Button merge,stop;
 
     private MediaBind mediaBind;
     private static String PATH = Environment.getExternalStorageDirectory().getAbsolutePath();
@@ -32,11 +32,21 @@ public class MainActivity extends AppCompatActivity {
 
         // Example of a call to a native method
         TextView tv = (TextView) findViewById(R.id.sample_text);
-        button = findViewById(R.id.merger);
-        button.setOnClickListener(new View.OnClickListener() {
+        merge = findViewById(R.id.merger);
+        stop = findViewById(R.id.stop);
+
+        merge.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 startCompose();
+                merge.setText("开始");
+            }
+        });
+        stop.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mediaBind.stop();
+                mediaBind.destory();
             }
         });
     }

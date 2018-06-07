@@ -262,7 +262,7 @@ public class MediaBind {
         long endTime;
         try {
 
-            int count = (int) (mDuration / bgmBean.getDuration());
+            int count = 3;//(int) (mDuration / bgmBean.getDuration());
             for (int i = 0; i < count; i++) {
                 mediaBeans.add(bgmBean.clone());
             }
