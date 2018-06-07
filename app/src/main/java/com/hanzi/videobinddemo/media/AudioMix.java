@@ -1,6 +1,8 @@
 package com.hanzi.videobinddemo.media;
 
+import android.media.MediaCodec;
 import android.media.MediaFormat;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
@@ -22,7 +24,7 @@ import java.util.Arrays;
 
 public class AudioMix {
     private final static String TAG = "AudioMix";
-    private String[] inPcmPaths = new String[2];
+//    private String[] inPcmPaths = new String[2];
     private File[] inPcmFiles = new File[2];
     private String outAACPath = "";
     private boolean isEncoding = false;
@@ -38,7 +40,9 @@ public class AudioMix {
     private Handler encoderHandler;
     private MediaFormat mediaFormat;
 
-    private ByteBuffer mReadBuf;
+    private static String PATH = Environment.getExternalStorageDirectory().getAbsolutePath();
+
+//    private ByteBuffer mReadBuf;
 
     private int mOutAudioTrackIndex;
 //    private FileOutputStream fos;
@@ -47,27 +51,26 @@ public class AudioMix {
     private FinishListener finishListener;
 
     public int open(String[] inPcmPaths, String outAACPath, MediaFormat mediaFormat, int sampleRate, int channelCount, int maxInputSize) {
-        this.inPcmPaths = inPcmPaths;
+//        this.inPcmPaths = inPcmPaths;
         this.outAACPath = outAACPath;
         this.sampleRate = sampleRate;
         this.mediaFormat = mediaFormat;
         byteContainer = new ByteContainer();
 
-        mReadBuf = ByteBuffer.allocate(1048576);
-
-        int mOutAudioTrackIndex = -1;
+//        mReadBuf = ByteBuffer.allocate(1048576);
 
         for (int i = 0; i < inPcmPaths.length; i++) {
             inPcmFiles[i] = new File(inPcmPaths[i]);
         }
-        Log.d(TAG, String.format("open inPcmPaths: %s outAACPath:%s sampleRate %d maxInputSize $d", inPcmPaths.toString(), outAACPath, sampleRate, maxInputSize));
+        Log.d(TAG, String.format("open inPcmPaths: %s outAACPath:%s sampleRate %d maxInputSize $d",
+                inPcmPaths.toString(), outAACPath, sampleRate, maxInputSize));
+
         audioEncoder = new AudioEncoder();
-        openEncoder(audioEncoder, sampleRate, channelCount, 8192);//maxInputSize ==500 * 1024??
+        openEncoder(audioEncoder, sampleRate, channelCount, maxInputSize);//maxInputSize ==500 * 1024??
 
         encodeHandlerThread = new HandlerThread("mixEncoder");
         encodeHandlerThread.start();
         encoderHandler = new Handler(encodeHandlerThread.getLooper());
-
         mediaFileMuxer = new MediaFileMuxer(outAACPath);
 //        try {
 //            fos = new FileOutputStream(new File(outAACPath));
@@ -95,7 +98,6 @@ public class AudioMix {
             try {
                 mediaFileMuxer.stop();
                 mediaFileMuxer.release();
-
             } catch (Exception e) {
                 Log.e(TAG, "Muxer close error. No data was written");
             }
@@ -106,7 +108,8 @@ public class AudioMix {
     public int start() {
         try {
             startMuxer();
-            pcmMix(inPcmFiles, outAACPath, 1, 1, sampleRate);
+             String mixPath = PATH + "/1/audioMixWithNoMuxer.aac";
+            pcmMix(inPcmFiles, mixPath, 1, 1, sampleRate);
             encoderHandler.post(audioMixEncodeInputRunnable);
         } catch (IOException e) {
             e.printStackTrace();
@@ -123,13 +126,11 @@ public class AudioMix {
     private Runnable audioMixEncodeInputRunnable = new Runnable() {
         @Override
         public void run() {
-            isEncoding = true;
+//            isEncoding = true;
             while (true) {
                 if (!byteContainer.isEmpty()) {
-                    Log.i(TAG, "run: encode false");
                     audioEncoder.encode(byteContainer.getData(), false);
                 }else {
-                    Log.i(TAG, "run: encode true");
                     audioEncoder.encode(null, true);
                     break;
                 }
@@ -177,7 +178,6 @@ public class AudioMix {
         }
         int value = 0;
 
-//        final boolean[] isStartEncode = {false};
         while (true) {
             for (int streamIndex = 0; streamIndex < fileSize; ++streamIndex) {
 
@@ -202,7 +202,7 @@ public class AudioMix {
             }
             Log.d(TAG, "pcmMix: done："+done);
             if (done) {
-                isEncoding = false;
+//                isEncoding = false;
                 Log.d(TAG, "pcmMix: isEncoding false");
                 break;
             }
@@ -227,75 +227,41 @@ public class AudioMix {
     }
 
     private void openEncoder(AudioEncoder audioEncoder, int sampleRate, int channelCount, int maxInputSize) {
-//        audioEncoder.open("mixAudioEncoder","audio/mp4a-latm", sampleRate, channelCount, 96000, maxInputSize, new AudioEncoder.AudioEncoderCallBack() {
-//            @Override
-//            public Rvoid onInputBuffer() {
-//
-//            }
-//
-//            @Override
-//            public void onOutputBuffer(byte[] data, MediaCodec.BufferInfo bufferInfo) {
-//
-//
-//                ByteBuffer byteBuffer = ByteBuffer.allocate(data.length);
-//                byteBuffer.put(data);
-//                byteBuffer.flip();
-//////                byteBuffer.get(datas);
-////                //添加头信息
-////                int outBitSize = bufferInfo.size;
-////                int outPacketSize = outBitSize + 7;//头文件长度为7
-////                byteBuffer.position(bufferInfo.offset);
-////                byteBuffer.limit(bufferInfo.offset + outBitSize);
-////                byte[] chunkAudio = new byte[outPacketSize];
-////                addADTStoPacket(chunkAudio, outPacketSize);
-////                byteBuffer.get(chunkAudio, 7, outBitSize);
-////                byteBuffer.position(bufferInfo.offset);
-////
-////                try {
-////                    bos.write(chunkAudio, 0, chunkAudio.length);//BufferOutputStream 将文件保存到内存卡中 *.aac
-////                    bos.flush();
-////                } catch (IOException e) {
-////                    e.printStackTrace();
-////                }
-//                Log.d(TAG, "onOutputBuffer: ");
-//                mediaFileMuxer.writeSampleData(mOutAudioTrackIndex, byteBuffer, bufferInfo);
-//            }
-//
-//            @Override
-//            public void encodeOver() {
-//                Log.d(TAG, "encodeOver: finish");
-//                if (finishListener != null)
-//                    finishListener.onFinish();
-//                stop();
-//
-////                try {
-////                    fos.close();
-////                    if (finishListener != null)
-////                        finishListener.onFinish();
-////                } catch (IOException e) {
-////                    e.printStackTrace();
-////                }
-//            }
-//        });
-//        audioEncoder.start();
+        audioEncoder.open("mixAudioEncoder","audio/mp4a-latm", sampleRate, channelCount, 96000, maxInputSize, new AudioEncoder.AudioEncoderCallBack() {
+            @Override
+            public void onInputBuffer() {
+
+            }
+
+            @Override
+            public void onOutputBuffer(byte[] data, MediaCodec.BufferInfo bufferInfo) {
+                ByteBuffer byteBuffer = ByteBuffer.allocate(data.length);
+                byteBuffer.put(data);
+                byteBuffer.flip();
+
+                Log.d(TAG, "onOutputBuffer: ");
+                mediaFileMuxer.writeSampleData(mOutAudioTrackIndex, byteBuffer, bufferInfo);
+            }
+
+            @Override
+            public void encodeOver() {
+                Log.d(TAG, "encodeOver: finish");
+                if (finishListener != null)
+                    finishListener.onFinish();
+                stop();
+
+//                try {
+//                    fos.close();
+//                    if (finishListener != null)
+//                        finishListener.onFinish();
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
+            }
+        });
+        audioEncoder.start();
     }
 
-    /**
-     * 写入ADTS头部数据
-     */
-    public static void addADTStoPacket(byte[] packet, int packetLen) {
-        int profile = 2; // AAC LC
-        int freqIdx = 4; // 44.1KHz
-        int chanCfg = 2; // CPE
-
-        packet[0] = (byte) 0xFF;
-        packet[1] = (byte) 0xF9;
-        packet[2] = (byte) (((profile - 1) << 6) + (freqIdx << 2) + (chanCfg >> 2));
-        packet[3] = (byte) (((chanCfg & 3) << 6) + (packetLen >> 11));
-        packet[4] = (byte) ((packetLen & 0x7FF) >> 3);
-        packet[5] = (byte) (((packetLen & 7) << 5) + 0x1F);
-        packet[6] = (byte) 0xFC;
-    }
 
     public void setOnFinishListener(FinishListener finishListener) {
         this.finishListener = finishListener;

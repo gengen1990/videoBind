@@ -54,9 +54,25 @@ public class AudioDecoder {
     }
 
     public int stop() {
+//        stopThread();
         decoder.stop();
         decoder.release();
         return 0;
+    }
+
+    private void stopThread() {
+//        mRunning = false;
+        if (mOutputThread != null) {
+            try {
+                Log.d(TAG, "stopThread: before");
+                mOutputThread.join();
+                Log.d(TAG, "stopThread: after");
+            } catch (Exception e) {
+                Log.e(TAG, "output thread join failed:" + e);
+            }
+            mOutputThread = null;
+        }
+
     }
 
     public int destory() {
