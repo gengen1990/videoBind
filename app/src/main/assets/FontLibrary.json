@@ -1,0 +1,184 @@
+[
+	{
+		"id"                : "font0",
+		"name"              : "Default",
+		"filePath"          : null,
+		"orderingKey"       : "ff",
+		"supportsOutline"   : true
+	},
+	{
+		"id"                : "font1",
+		"name"              : "NFL Packers",
+		"filePath"          : "fonts/NFL_Packers.ttf",
+		"orderingKey"       : "ff",
+		"supportsOutline"   : true
+	},
+	{
+		"id"                : "font2",
+		"name"              : "PixelSplitter",
+		"filePath"          : "fonts/PixelSplitter-Bold.ttf",
+		"orderingKey"       : "ff",
+		"supportsOutline"   : true
+	},
+	{
+		"id"                : "font3",
+		"name"              : "Lovelo",
+		"filePath"          : "fonts/Lovelo_Line_Bold.otf",
+		"orderingKey"       : "ff",
+		"supportsOutline"   : false
+	},
+	{
+		"id"                : "font4",
+		"name"              : "Comfortaa",
+		"filePath"          : "fonts/Comfortaa_Bold.ttf",
+		"orderingKey"       : "ff",
+		"supportsOutline"   : true
+	},
+	{
+		"id"                : "font5",
+		"name"              : "Starshine",
+		"filePath"          : "fonts/Starshine-Regular.otf",
+		"orderingKey"       : "ff",
+		"supportsOutline"   : true
+	},
+	{
+		"id"                : "font6",
+		"name"              : "Billy",
+		"filePath"          : "fonts/Billy.ttf",
+		"orderingKey"       : "ff",
+		"supportsOutline"   : true
+	},
+	{
+		"id"                : "font7",
+		"name"              : "Bebas Neue",
+		"filePath"          : "fonts/01_BebasNeue.otf",
+		"orderingKey"       : "ff",
+		"supportsOutline"   : true
+	},
+	{
+		"id"                : "font8",
+		"name"              : "League Gothic",
+		"filePath"          : "fonts/02_LeagueGothic.otf",
+		"orderingKey"       : "ff",
+		"supportsOutline"   : true
+	},
+	{
+		"id"                : "font9",
+		"name"              : "Baron Neue",
+		"filePath"          : "fonts/03_Baron Neue.otf",
+		"orderingKey"       : "ff",
+		"supportsOutline"   : true
+	},
+	{
+		"id"                : "font10",
+		"name"              : "VIPER NORA",
+		"filePath"          : "fonts/03_VIPERNORA.TTF",
+		"orderingKey"       : "ff",
+		"supportsOutline"   : false
+	},
+	{
+		"id"                : "font11",
+		"name"              : "Executive",
+		"filePath"          : "fonts/04_Executive.otf",
+		"orderingKey"       : "ff",
+		"supportsOutline"   : true
+	},
+	{
+		"id"                : "font12",
+		"name"              : "Philosopher",
+		"filePath"          : "fonts/06_Philosopher.ttf",
+		"orderingKey"       : "ff",
+		"supportsOutline"   : true
+	},
+	{
+		"id"                : "font13",
+		"name"              : "Lobster",
+		"filePath"          : "fonts/07_Lobster.otf",
+		"orderingKey"       : "ff",
+		"supportsOutline"   : true
+	},
+	{
+		"id"                : "font14",
+		"name"              : "Morris Roman",
+		"filePath"          : "fonts/08_MorrisRoman.otf",
+		"orderingKey"       : "ff",
+		"supportsOutline"   : true
+	},
+	{
+		"id"                : "font15",
+		"name"              : "Mission Script",
+		"filePath"          : "fonts/09_MissionScript.otf",
+		"orderingKey"       : "ff",
+		"supportsOutline"   : true
+	},
+	{
+		"id"                : "font16",
+		"name"              : "Chopin Script",
+		"filePath"          : "fonts/10_ChopinScript.otf",
+		"orderingKey"       : "ff",
+		"supportsOutline"   : true
+	},
+	{
+		"id"                : "font17",
+		"name"              : "Jenna Sue",
+		"filePath"          : "fonts/12_JennaSue.ttf",
+		"orderingKey"       : "ff",
+		"supportsOutline"   : false
+	},
+	{
+		"id"                : "font18",
+		"name"              : "Pacifico",
+		"filePath"          : "fonts/13_Pacifico.ttf",
+		"orderingKey"       : "ff",
+		"supportsOutline"   : true
+	},
+	{
+		"id"                : "font19",
+		"name"              : "Kiwi School",
+		"filePath"          : "fonts/14_Kiwi School.ttf",
+		"orderingKey"       : "ff",
+		"supportsOutline"   : true
+	},
+	{
+		"id"                : "font20",
+		"name"              : "REIS",
+		"filePath"          : "fonts/15_REIS.ttf",
+		"orderingKey"       : "ff",
+		"supportsOutline"   : false
+	},
+	{
+		"id"                : "font21",
+		"name"              : "Harry P",
+		"filePath"          : "fonts/16_HarryP.TTF",
+		"orderingKey"       : "ff",
+		"supportsOutline"   : true
+	},
+	{
+		"id"                : "font22",
+		"name"              : "Dripping Marker",
+		"filePath"          : "fonts/17_adrippingmaker.ttf",
+		"orderingKey"       : "ff",
+		"supportsOutline"   : false
+	},
+	{
+		"id"                : "font23",
+		"name"              : "Whoa!",
+		"filePath"          : "fonts/18_whoa!.ttf",
+		"orderingKey"       : "ff",
+		"supportsOutline"   : true
+	},
+	{
+		"id"                : "font24",
+		"name"              : "Alum Free",
+		"filePath"          : "fonts/19_AlumFree.ttf",
+		"orderingKey"       : "ff",
+		"supportsOutline"   : false
+	},
+	{
+		"id"                : "font25",
+		"name"              : "Qarkitech",
+		"filePath"          : "fonts/19_Qarkitech.ttf",
+		"orderingKey"       : "ff",
+		"supportsOutline"   : false
+	}
+]
