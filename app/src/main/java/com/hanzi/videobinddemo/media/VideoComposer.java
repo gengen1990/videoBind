@@ -18,6 +18,8 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static android.media.MediaExtractor.SEEK_TO_PREVIOUS_SYNC;
 
@@ -39,8 +41,13 @@ public class VideoComposer {
 
     private int mFrameRate = 15, mOutWidth = -1, mOutHeight = -1;
 
-    private HandlerThread decoderThread;
+    private HandlerThread composerThread;
+    private Handler composerHandler;
+
     private Handler decoderHandler;
+    private HandlerThread decoderThread;
+
+    static ExecutorService executorService = Executors.newFixedThreadPool(4);
 
     private boolean beStop = false;
 
@@ -71,15 +78,24 @@ public class VideoComposer {
             VideoExtractor extractor = new VideoExtractor(bean.getUrl(), bean.getStartTimeUs(), bean.getEndTimeUs());
             mMediaExtractors.add(extractor);
             mDuration += extractor.getDurationUs();
-            if (bean.getVideoWidth()==0) {
+            if (bean.getVideoWidth() == 0) {
                 bean.setVideoWidth(extractor.getWidth());
             }
-            if (bean.getVideoHeight()==0) {
+            if (bean.getVideoHeight() == 0) {
                 bean.setVideoHeight(extractor.getHeight());
             }
             bean.setRate(extractor.getFrameRate());
-
+//            if (mOutWidth==0 || mOutHeight==0) {
+//                mOutWidth = bean.getVideoWidth();
+//                mOutHeight = bean.getVideoHeight();
+//            }
+            mFrameRate = bean.getRate();
         }
+
+
+        composerThread = new HandlerThread("composer");
+        composerThread.start();
+        composerHandler = new Handler(composerThread.getLooper());
 
         decoderThread = new HandlerThread("decoder");
         decoderThread.start();
@@ -92,16 +108,16 @@ public class VideoComposer {
 
     public void start() {
         startMuxer();
-//        decoderHandler.post(new Runnable() {
-//            @Override
-//            public void run() {
-                startVideoEdit();//还没有完善，暂时每一个视频都进行编码解码的操作吧
+        composerHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                startVideoEdit();
                 if (isEditOk()) {
                     videoComposerCallBack.onh264Path();
                 }
-//                startMerge();
-//            }
-//        });
+                startMerge();
+            }
+        });
     }
 
     private boolean isEditOk() {
@@ -128,23 +144,33 @@ public class VideoComposer {
     }
 
     private void startVideoEdit() {
-        if (mMediaExtractors == null || mMediaExtractors.size() == 0) {
+        if (beStop && (mMediaExtractors == null || mMediaExtractors.size() == 0)) {
             return;
         }
         int index = 0;
-        for (VideoExtractor videoExtractor : mMediaExtractors) {
-            long firstSampleTime = videoExtractor.getSampleTime();
-            long durationUs = videoExtractor.getDurationUs();
-            long startTimeUs = videoExtractor.getStartTimeUs();
-            long endTimeUs = videoExtractor.getEndTimeUs();
-            if (endTimeUs != -1 && endTimeUs < durationUs) {
-                durationUs = endTimeUs - startTimeUs;
-            }
-            if (videoExtractor.isNeedToChanged()) {
-                videoEditIndex.put(index, false);
-                oneVideoEdit(index, videoExtractor, firstSampleTime, durationUs, startTimeUs, endTimeUs);
-            }
+        for (final VideoExtractor videoExtractor : mMediaExtractors) {
+            final int finalIndex = index;
+            executorService.execute(new Runnable() {
+                @Override
+                public void run() {
+                    long firstSampleTime = videoExtractor.getSampleTime();
+                    long durationUs = videoExtractor.getDurationUs();
+                    long startTimeUs = videoExtractor.getStartTimeUs();
+                    long endTimeUs = videoExtractor.getEndTimeUs();
+                    if (endTimeUs != -1 && endTimeUs < durationUs) {
+                        durationUs = endTimeUs - startTimeUs;
+                    }
 
+                    Log.d(TAG, String.format("startVideoEdit: firstSampleTime:%d, durationUs:%d, startTimeUs:%d, endTimeUs:%d",
+                            firstSampleTime, durationUs, startTimeUs, endTimeUs));
+
+                    if (videoExtractor.isNeedToChanged()) {
+                        videoEditIndex.put(finalIndex, false);
+
+                        oneVideoEdit(finalIndex, videoExtractor, firstSampleTime, durationUs, startTimeUs, endTimeUs);
+                    }
+                }
+            });
             index++;
         }
     }
@@ -161,39 +187,40 @@ public class VideoComposer {
      */
     private void oneVideoEdit(int index, final VideoExtractor videoExtractor, final long firstSampleTime, final long durationUs, final long startTimeUs, long endTimeUs) {
         videoExtractor.seekTo(firstSampleTime + startTimeUs, SEEK_TO_PREVIOUS_SYNC);
-        int width =0,height =0,frameRate = 0;
+        int width = 0, height = 0, frameRate = 0;
         if (mOutWidth == 0) {
-            width= videoExtractor.getWidth();
-        }else {
-            width =mOutWidth;
+            width = videoExtractor.getWidth();
+        } else {
+            width = mOutWidth;
         }
 
 
-        if (mOutHeight ==0) {
+        if (mOutHeight == 0) {
             height = videoExtractor.getHeight();
-        }else {
-            height =mOutHeight;
+        } else {
+            height = mOutHeight;
         }
 
-        frameRate= videoExtractor.getFrameRate();
-
+        frameRate = videoExtractor.getFrameRate();
 
         VideoEncoder encoder = new VideoEncoder();
-        openEncoder(index, encoder, width, height, frameRate);
-        Log.d(TAG, "oneVideoEdit: ");
+
+
+        Log.i(TAG, "oneVideoEdit: width:"+width);
+        Log.i(TAG, "oneVideoEdit: height:"+height);
         final VideoDecoder decoder = new VideoDecoder();
         openDecoder(index, decoder, videoExtractor, encoder, firstSampleTime, startTimeUs);
-
+        openEncoder(index, encoder, width, height, frameRate);
         decoder.start();
         encoder.start();
 
-        decoderHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                inputForDecoder(videoExtractor, firstSampleTime, durationUs, startTimeUs, decoder);
+//        decoderHandler.post(new Runnable() {
+//            @Override
+//            public void run() {
+                inputForDecoder2(videoExtractor, firstSampleTime, durationUs, startTimeUs, decoder);
 
-            }
-        });
+//            }
+//        });
     }
 
     private void openEncoder(final int index, VideoEncoder encoder, int width, int height, int frameRate) {
@@ -218,7 +245,7 @@ public class VideoComposer {
     }
 
     private void startMerge() {
-        if (mMediaExtractors == null || mMediaExtractors.size() == 0) {
+        if (beStop && (mMediaExtractors == null || mMediaExtractors.size() == 0)) {
             return;
         }
         int index = 0;
@@ -243,13 +270,13 @@ public class VideoComposer {
 
     private void startMuxer() {
         MediaFormat mediaFormat = mMediaExtractors.get(0).getFormat();
-        if (mediaFormat != null) {
+        if (mediaFormat != null && mOutHeight != 0 && mOutWidth != 0 && mFrameRate != 0) {
             mediaFormat.setInteger("frame-rate", mFrameRate);
             mediaFormat.setInteger("width", mOutWidth);
             mediaFormat.setInteger("height", mOutHeight);
         }
 
-        Log.d(TAG, "startMuxer: mediaFormat:"+mediaFormat.toString());
+        Log.d(TAG, "startMuxer: mediaFormat:" + mediaFormat.toString());
 
         mOutVideoTrackIndex = mediaFileMuxer.addTrack(mediaFormat);
         Log.d(TAG, "startMuxer: mediaFormat:" + mediaFormat.toString());
@@ -284,9 +311,21 @@ public class VideoComposer {
 //        videoInfo.width = videoExtractor.getWidth();
 //        videoInfo.height = videoExtractor.getHeight();
 //        videoInfo.rotation = 0;
+
+        Log.i(TAG, "openDecoder: format:"+format);
         MediaBean mediaBean = mMediaBeans.get(index);
-       
+
         decoder.open(mediaBean, mFilter, format, firstSampleTime, startTimeUs, new VideoDecoder.VideoDecodeCallBack() {
+            @Override
+            public int putInputData(ByteBuffer byteBuffer) {
+                return videoExtractor.readSampleData(byteBuffer, 0);
+            }
+
+            @Override
+            public long getPresentationTimeUs() {
+                return videoExtractor.getSampleTime();
+            }
+
             @Override
             public void onInputBuffer() {
                 videoExtractor.advance();
@@ -295,12 +334,12 @@ public class VideoComposer {
 
             @Override
             public void onOutputBuffer(byte[] bytes) {
-                Log.d(TAG, "onOutputBuffer: length:"+bytes.length);
+                Log.d(TAG, "onOutputBuffer: length:" + bytes.length);
             }
 
             @Override
             public void onOutputBufferInfo(MediaCodec.BufferInfo bufferInfo) {
-                Log.d(TAG, "onOutputBufferInfo: "+bufferInfo);
+                Log.d(TAG, "onOutputBufferInfo: " + bufferInfo);
                 videoEncoder.encoder(bufferInfo);
 
             }
@@ -315,13 +354,13 @@ public class VideoComposer {
     private void inputForDecoder(VideoExtractor videoExtractor, long firstSampleTime,
                                  long durationUs, long startTimeUs, VideoDecoder decoder) {
         boolean isRunning = true;
-        mReadBuf.rewind();
+//        mReadBuf.rewind();
         while (isRunning) {
             int sampleSize = videoExtractor.readSampleData(mReadBuf, 0);
             long sampleTime = videoExtractor.getSampleTime();
             long now = videoExtractor.getSampleTime() - firstSampleTime - startTimeUs;
 
-            Log.d(TAG, String.format("now %d sampleSize %d  sampleTime %d",now,sampleSize,sampleTime));
+            Log.d(TAG, String.format("now %d sampleSize %d  sampleTime %d", now, sampleSize, sampleTime));
 
             if (sampleSize < 0 || (now >= durationUs || now == -1)) {
                 isRunning = false;
@@ -330,6 +369,26 @@ public class VideoComposer {
                 if (!decoder.decode(mReadBuf, sampleSize, sampleTime)) {
                     isRunning = false;
                 }
+            }
+        }
+    }
+
+    private void inputForDecoder2(VideoExtractor videoExtractor, long firstSampleTime,
+                                  long durationUs, long startTimeUs, VideoDecoder decoder) {
+        boolean isRunning = true;
+//        mReadBuf.rewind();
+        while (isRunning) {
+            long now;
+            if (!beStop) {
+                now = videoExtractor.getSampleTime() - firstSampleTime - startTimeUs;
+            } else {
+                now = -1;
+            }
+            boolean beEndStream = (now >= durationUs || now == -1);
+//            Log.i(TAG, "inputForDecoder2: beEndStream:" + beEndStream);
+//            Log.i(TAG, "inputForDecoder2: now:" + now);
+            if (!decoder.decode(beEndStream)) {
+                isRunning = false;
             }
         }
     }

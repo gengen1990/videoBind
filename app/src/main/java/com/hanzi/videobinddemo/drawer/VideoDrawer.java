@@ -162,10 +162,10 @@ public class VideoDrawer implements GLSurfaceView.Renderer {
 
     @Override
     public void onSurfaceChanged(GL10 gl, int width, int height) {
-        Log.d(TAG, "onSurfaceChanged: width:" + width);
-        Log.d(TAG, "onSurfaceChanged: height:" + height);
-        Log.d(TAG, "onSurfaceChanged: contentWidth:" + contentWidth);
-        Log.d(TAG, "onSurfaceChanged: contentHeight:" + contentHeight);
+        Log.i(TAG, "onSurfaceChanged: width:" + width);
+        Log.i(TAG, "onSurfaceChanged: height:" + height);
+        Log.i(TAG, "onSurfaceChanged: contentWidth:" + contentWidth);
+        Log.i(TAG, "onSurfaceChanged: contentHeight:" + contentHeight);
         viewWidth = width;
         viewHeight = height;
         if (contentWidth == 0 || contentHeight == 0) {
@@ -180,10 +180,10 @@ public class VideoDrawer implements GLSurfaceView.Renderer {
                 showHeight = viewWidth * contentHeight / contentWidth;
             }
         }
-        Log.d(TAG, "onSurfaceChanged: showWidth:" + showWidth);
-        Log.d(TAG, "onSurfaceChanged: showHeight:" + showHeight);
-        Log.d(TAG, "onSurfaceChanged: x:" + (viewWidth - showWidth) / 2);
-        Log.d(TAG, "onSurfaceChanged: y:" + (viewHeight - showHeight) / 2);
+        Log.i(TAG, "onSurfaceChanged: showWidth:" + showWidth);
+        Log.i(TAG, "onSurfaceChanged: showHeight:" + showHeight);
+        Log.i(TAG, "onSurfaceChanged: x:" + (viewWidth - showWidth) / 2);
+        Log.i(TAG, "onSurfaceChanged: y:" + (viewHeight - showHeight) / 2);
 
 
         GLES20.glDeleteFramebuffers(1, fFrame, 0);
@@ -228,10 +228,10 @@ public class VideoDrawer implements GLSurfaceView.Renderer {
             }
 
             lastRecordFrameTime = currentTime;
-//            Log.d(TAG, "caculateFrameRate: (currentTime-lastRecordFrameTime)/1000 :");
-//            Log.d(TAG, "caculateFrameRate: lastRecordFrameTime:"+lastRecordFrameTime);
-//            Log.d(TAG, "caculateFrameRate: "+frameRate);
-//            Log.d(TAG, "caculateFrameRate: framePosition:"+framePosition
+//            Log.i(TAG, "caculateFrameRate: (currentTime-lastRecordFrameTime)/1000 :");
+//            Log.i(TAG, "caculateFrameRate: lastRecordFrameTime:"+lastRecordFrameTime);
+//            Log.i(TAG, "caculateFrameRate: "+frameRate);
+//            Log.i(TAG, "caculateFrameRate: framePosition:"+framePosition
 //            );
             if (callback != null)
                 callback.onVideoRate(frameRate);
@@ -324,8 +324,8 @@ public class VideoDrawer implements GLSurfaceView.Renderer {
     }
 
     public void onVideoChanged(VideoInfo info) {
-        Log.d(TAG, "onVideoChanged: width:" + info.width);
-        Log.d(TAG, "onVideoChanged: height:" + info.height);
+        Log.i(TAG, "onVideoChanged: width:" + info.width);
+        Log.i(TAG, "onVideoChanged: height:" + info.height);
         contentWidth = info.width;
         contentHeight = info.height;
         onSurfaceChanged(null, viewWidth, viewHeight);

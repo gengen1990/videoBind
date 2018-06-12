@@ -65,29 +65,29 @@ public class MediaBind {
 
     public int open(MediaBindInfo bindInfo) {
         this.mediaBindInfo = bindInfo;
-//        initVideoComposer(bindInfo);
-        initAudioComposer(bindInfo);
-        initBgmComposer(bindInfo);
+        initVideoComposer(bindInfo);
+//        initAudioComposer(bindInfo);
+//        initBgmComposer(bindInfo);
 
-        initMediaAudioMix();
-        initMediaCombine();
+//        initMediaAudioMix();
+//        initMediaCombine();
         return 0;
     }
 
     public int start() {
-        startAudio();
-//        startVideo();
-//        startCombine();
+//        startAudio();
+        startVideo();
+        startCombine();
         return 0;
     }
 
     public int stop() {
-        audioComposer.stop();
-        bgmComposer.stop();
-        audioMix.stop();
-        mediaCombine.stop();
+//        audioComposer.stop();
+//        bgmComposer.stop();
+//        audioMix.stop();
+//        mediaCombine.stop();
 
-//        videoComposer.stop();
+        videoComposer.stop();
         return 0;
     }
 

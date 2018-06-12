@@ -60,7 +60,7 @@ public class MainActivity extends AppCompatActivity {
 
                 List<MediaBean> mediaBeans = new ArrayList<>();
                 mediaBeans.add(new MediaBean(finalinputFilePath1, 0));
-                mediaBeans.add(new MediaBean(finalinputFilePath2, 0));
+//                mediaBeans.add(new MediaBean(finalinputFilePath2, 0));
 
                 mediaBindInfo.setMediaBeans(mediaBeans);
 

@@ -32,9 +32,9 @@ public class VideoEncoder {
 
     public int open(String encodeType, int width, int height, int frameRate,
                     VideoEncoderCallBack videoEncoderCallback) {
-        Log.d(TAG, "open: frameRate:"+frameRate);
-        Log.d(TAG, "open: width:"+width);
-        Log.d(TAG, "open: height:"+height);
+        Log.d(TAG, "open: frameRate:" + frameRate);
+        Log.d(TAG, "open: width:" + width);
+        Log.d(TAG, "open: height:" + height);
         try {
             encoder = MediaCodec.createEncoderByType(encodeType);
 
@@ -81,7 +81,7 @@ public class VideoEncoder {
     public int stop() {
         stopEncoder();
 //        stopThread();
-        if (encoder!=null) {
+        if (encoder != null) {
             encoder.stop();
             encoder.release();
         }
@@ -125,6 +125,7 @@ public class VideoEncoder {
                     if (index == MediaCodec.INFO_TRY_AGAIN_LATER) {
 //                        mRunning = false;
 //                        Log.d(TAG, "run: INFO_TRY_AGAIN_LATER");
+                        continue;
                     } else if (index == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
                         outputBuffers = encoder.getOutputBuffers();
                     } else if (index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
@@ -137,7 +138,8 @@ public class VideoEncoder {
                         boolean done = (outputInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0;
                         if (done) {
                             mRunning = false;
-                            videoEncoderCallback.encodeOver();
+                            if (videoEncoderCallback != null)
+                                videoEncoderCallback.encodeOver();
                         }
                         if (outputInfo.presentationTimeUs == 0 && !done) {
                             continue;
@@ -147,6 +149,7 @@ public class VideoEncoder {
                             outputData.position(outputInfo.offset);
                             outputData.limit(outputInfo.offset + outputInfo.size);
                             if (outputInfo.presentationTimeUs > lastStamp) {//为了避免有问题的数据
+                                Log.i(TAG, "run: onOutputBuffer :"+outputData);
                                 videoEncoderCallback.onOutputBuffer(outputData, outputInfo);
                                 lastStamp = outputInfo.presentationTimeUs;
                             }

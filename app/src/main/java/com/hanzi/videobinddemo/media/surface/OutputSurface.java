@@ -94,6 +94,8 @@ public class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
             }
             mDrawer.setFilter(mFilter);
         }
+        Log.i(TAG, "setup: videoWidth:"+mMediaBean.getVideoWidth());
+        Log.i(TAG, "setup: videoHeight:"+mMediaBean.getVideoHeight());
         mDrawer.onSurfaceChanged(null, mMediaBean.getVideoWidth(), mMediaBean.getVideoHeight());
 
         // Even if we don't access the SurfaceTexture after the constructor returns, we
@@ -258,7 +260,8 @@ public class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
                     mFrameSyncObject.wait(TIMEOUT_MS);
                     if (!mFrameAvailable) {
                         // TODO: if "spurious wakeup", continue while loop
-                        throw new RuntimeException("Surface frame wait timed out");
+                        Log.i(TAG, "awaitNewImage:  Surface frame wait timed out");
+//                        throw new RuntimeException("Surface frame wait timed out");
                     }
                 } catch (InterruptedException ie) {
                     // shouldn't happen
@@ -290,7 +293,7 @@ public class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
 
     @Override
     public void onFrameAvailable(SurfaceTexture st) {
-
+        Log.i(TAG, "onFrameAvailable: new frame available");
         if (VERBOSE) Log.d(TAG, "new frame available");
         synchronized (mFrameSyncObject) {
             if (mFrameAvailable) {
