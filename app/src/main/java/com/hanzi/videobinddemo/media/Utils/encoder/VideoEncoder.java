@@ -18,7 +18,7 @@ public class VideoEncoder {
     private final static String TAG = "VideoEncoder";
     private MediaCodec encoder;
     private InputSurface inputSurface;
-    final int TIMEOUT_USEC = 0;
+    final int TIMEOUT_USEC = -1;
 
     ByteBuffer[] inputBuffers;
     ByteBuffer[] outputBuffers;
@@ -46,6 +46,7 @@ public class VideoEncoder {
 
             encoder.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
             inputSurface = new InputSurface(encoder.createInputSurface());
+//            inputSurface.makeCurrent();
             this.videoEncoderCallback = videoEncoderCallback;
 
         } catch (IOException e) {
@@ -54,7 +55,7 @@ public class VideoEncoder {
         return 0;
     }
 
-    public int start() {
+    public int start(boolean outputsync) {
         Log.d(TAG, "start: ");
         encoder.start();
 
@@ -62,16 +63,20 @@ public class VideoEncoder {
         outputBuffers = encoder.getOutputBuffers();
         inputInfo = new MediaCodec.BufferInfo();
 
-        mOutputThread = new Thread(new CEncoderRunnable());
-        mOutputThread.start();
+        if(outputsync) {
+            mOutputThread = new Thread(new CEncoderRunnable());
+            mOutputThread.start();
+        }
         return 0;
     }
 
     public boolean encoder(MediaCodec.BufferInfo info) {
-        inputSurface.setPresentationTime(info.presentationTimeUs);
+//        inputSurface.makeCurrent();
+        inputSurface.setPresentationTime(info.presentationTimeUs * 1000 );
         inputSurface.swapBuffers();
-
+        Log.i(TAG, "encoder: swapBuffers after");
         if ((info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
+            Log.i(TAG, "encoder: signalEndOfInputStream");
             encoder.signalEndOfInputStream();
             return false;
         }
@@ -105,65 +110,83 @@ public class VideoEncoder {
     }
 
     public void signalEndOfInputStream() {
+        Log.i(TAG, "encoder ok: signalEndOfInputStream");
         encoder.signalEndOfInputStream();
+    }
+
+    public void makeCurrent() {
+        if (inputSurface!=null) {
+            inputSurface.makeCurrent();
+        }
     }
 
     private final class CEncoderRunnable implements Runnable {
         @Override
         public void run() {
-            Log.i(TAG, "video hardware encoder output thread running");
+            encodeOutput();
+        }
+    }
+
+    public boolean encodeOutput() {
+        Log.i(TAG, "video hardware encoder output thread running");
 //            if (mRunning) {
 //                Log.e(TAG, "video hardware decoder start again!");
 //                return;
 //            }
-            mRunning = true;
-            long lastStamp = -1;
-            while (mRunning) {
-                try {
-                    MediaCodec.BufferInfo outputInfo = new MediaCodec.BufferInfo();
-                    int index = encoder.dequeueOutputBuffer(outputInfo, TIMEOUT_USEC);
-                    if (index == MediaCodec.INFO_TRY_AGAIN_LATER) {
+        mRunning = true;
+        long lastStamp = -1;
+        while (mRunning) {
+            try {
+                MediaCodec.BufferInfo outputInfo = new MediaCodec.BufferInfo();
+                int index = encoder.dequeueOutputBuffer(outputInfo, TIMEOUT_USEC);
+                Log.i(TAG, "run: index:" + index);
+                if (index == MediaCodec.INFO_TRY_AGAIN_LATER) {
 //                        mRunning = false;
 //                        Log.d(TAG, "run: INFO_TRY_AGAIN_LATER");
-                        continue;
-                    } else if (index == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
-                        outputBuffers = encoder.getOutputBuffers();
-                    } else if (index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-                        MediaFormat newFormat = encoder.getOutputFormat();
-                        Log.d(TAG, "run: newFormat:" + newFormat.toString());
-                    } else if (index < 0) {
-
-                    } else {
-                        ByteBuffer outputData = outputBuffers[index];
-                        boolean done = (outputInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0;
-                        if (done) {
-                            mRunning = false;
-                            if (videoEncoderCallback != null)
-                                videoEncoderCallback.encodeOver();
-                        }
-                        if (outputInfo.presentationTimeUs == 0 && !done) {
-                            continue;
-                        }
-
-                        if (outputInfo.size != 0 && outputInfo.presentationTimeUs > 0) {
-                            outputData.position(outputInfo.offset);
-                            outputData.limit(outputInfo.offset + outputInfo.size);
-                            if (outputInfo.presentationTimeUs > lastStamp) {//为了避免有问题的数据
-                                Log.i(TAG, "run: onOutputBuffer :"+outputData);
-                                videoEncoderCallback.onOutputBuffer(outputData, outputInfo);
-                                lastStamp = outputInfo.presentationTimeUs;
-                            }
-                        }
-                        encoder.releaseOutputBuffer(index, false);
+                    continue;
+                } else if (index == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
+                    outputBuffers = encoder.getOutputBuffers();
+                } else if (index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                    MediaFormat newFormat = encoder.getOutputFormat();
+                    Log.d(TAG, "run: newFormat:" + newFormat.toString());
+                    if (videoEncoderCallback != null) {
+                        videoEncoderCallback.formatChanged();
                     }
-                } catch (Exception e) {
-                    Log.e(TAG, "dequeueOutputBuffer exception:" + e);
-                    break;
+                } else if (index < 0) {
+
+                } else {
+                    ByteBuffer outputData = outputBuffers[index];
+                    boolean done = (outputInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0;
+                    if (done) {
+                        if (videoEncoderCallback != null)
+                            videoEncoderCallback.encodeOver();
+                        mRunning = false;
+                        return false;
+                    }
+                    if (outputInfo.presentationTimeUs == 0 && !done) {
+                        continue;
+                    }
+
+                    if (outputInfo.size != 0 && outputInfo.presentationTimeUs > 0) {
+                        outputData.position(outputInfo.offset);
+                        outputData.limit(outputInfo.offset + outputInfo.size);
+                        if (outputInfo.presentationTimeUs > lastStamp) {//为了避免有问题的数据
+                            Log.i(TAG, "run: presentationTimeUs :" + outputInfo.presentationTimeUs);
+                            if (videoEncoderCallback != null)
+                                videoEncoderCallback.onOutputBuffer(outputData, outputInfo);
+                            lastStamp = outputInfo.presentationTimeUs;
+                        }
+                    }
+                    encoder.releaseOutputBuffer(index, false);
                 }
+                return true;
+            } catch (Exception e) {
+                Log.e(TAG, "dequeueOutputBuffer exception:" + e);
+                return false;
             }
-            Log.i(TAG, "video hardware decoder output thread exit!");
-//            stopThread();
         }
+        Log.i(TAG, "video hardware decoder output thread exit!");
+//            stopThread();
     }
 
     private int stopEncoder() {
@@ -183,5 +206,8 @@ public class VideoEncoder {
         void onOutputBuffer(ByteBuffer bytes, MediaCodec.BufferInfo bufferInfo);
 
         void encodeOver();
+
+        void formatChanged();
+
     }
 }

@@ -16,7 +16,7 @@ public class NoFilter extends AFilter {
     protected void onCreate() {
         createProgramByAssetsFile("shader/base_vertex.sh",
             "shader/base_fragment.sh");
-    }
+}
 
     /**
      * 背景默认为黑色

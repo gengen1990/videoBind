@@ -5,6 +5,7 @@ import android.media.MediaFormat;
 import android.util.Log;
 
 import com.hanzi.videobinddemo.filter.AFilter;
+import com.hanzi.videobinddemo.filter.BlendingFilter;
 import com.hanzi.videobinddemo.media.Variable.MediaBean;
 import com.hanzi.videobinddemo.media.surface.OutputSurface;
 
@@ -44,17 +45,18 @@ public class VideoDecoder {
     private long mStartTimeUs;
 
     public int open(MediaBean mediaBean, AFilter filter, MediaFormat trackFormat,
-                    long firstSampleTime, long startTimeUs, VideoDecodeCallBack videoDecodeCallback) {
+                    int width, int height, long firstSampleTime, long startTimeUs, VideoDecodeCallBack videoDecodeCallback) {
         try {
 
-            Log.i(TAG, "open: mFirstSampleTime:"+firstSampleTime);
-            Log.i(TAG, "open: startTimeUs:"+startTimeUs);
+            Log.i(TAG, "open: mFirstSampleTime:" + firstSampleTime);
+            Log.i(TAG, "open: startTimeUs:" + startTimeUs);
             decoder = MediaCodec.createDecoderByType(trackFormat.getString(MediaFormat.KEY_MIME));
 
-            if (filter!=null) {
+            if (filter != null && filter instanceof BlendingFilter) {
                 mFilter = (AFilter) filter.clone();
             }
             outputSurface = new OutputSurface(mediaBean, mFilter);
+
             decoder.configure(trackFormat, outputSurface.getSurface(), null, 0);
             this.mFirstSampleTime = firstSampleTime;
             this.mStartTimeUs = startTimeUs;
@@ -67,15 +69,17 @@ public class VideoDecoder {
         return 0;
     }
 
-    public int start() {
+    public int start(boolean outputsync) {
         Log.d(TAG, "start: ");
         decoder.start();
         inputBuffers = decoder.getInputBuffers();
         outputBuffers = decoder.getOutputBuffers();
         inputInfo = new MediaCodec.BufferInfo();
 
-        mOutputThread = new Thread(new CDecoderRunnable());
-        mOutputThread.start();
+        if (outputsync) {
+            mOutputThread = new Thread(new CDecoderRunnable());
+            mOutputThread.start();
+        }
 //        executorService.execute(new CDecoderRunnable());
         return 0;
     }
@@ -83,7 +87,7 @@ public class VideoDecoder {
     public boolean decode(ByteBuffer byteBuffer, int sampleSize, long sampleTime) {
         int index = decoder.dequeueInputBuffer(TIMEOUT_USEC);
         if (index >= 0) {
-            Log.d(TAG, "run: dequeueInputBuffer index:"+index);
+            Log.d(TAG, "run: dequeueInputBuffer index:" + index);
             ByteBuffer inputBuffer = inputBuffers[index];
             inputBuffer.clear();
             inputBuffer.put(byteBuffer);
@@ -97,8 +101,8 @@ public class VideoDecoder {
                 inputInfo.flags = MediaCodec.BUFFER_FLAG_SYNC_FRAME;
                 inputInfo.presentationTimeUs = sampleTime;
                 decoder.queueInputBuffer(index, inputInfo.offset, sampleSize, inputInfo.presentationTimeUs, 0);
-                if (videoDecodeCallBack!=null)
-                videoDecodeCallBack.onInputBuffer();
+                if (videoDecodeCallBack != null)
+                    videoDecodeCallBack.onInputBuffer();
 
                 return true;
             }
@@ -110,8 +114,8 @@ public class VideoDecoder {
         int index = decoder.dequeueInputBuffer(TIMEOUT_USEC);
         mBeEndOfStream = beEndOfStream;
 
-        if (index>=0) {
-            Log.i(TAG, "decode: index:"+index);
+        if (index >= 0) {
+            Log.i(TAG, "decode: index:" + index);
             if (mBeEndOfStream) {
                 Log.d(TAG, "decode: dequeueInputBuffer over");
                 decoder.queueInputBuffer(index, 0, 0, 0L, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
@@ -123,8 +127,8 @@ public class VideoDecoder {
 
             int size = 0;
             long presentationTimeUs = 0;
-            if (videoDecodeCallBack!=null) {
-                size= videoDecodeCallBack.putInputData(inputBuffer);
+            if (videoDecodeCallBack != null) {
+                size = videoDecodeCallBack.putInputData(inputBuffer);
                 presentationTimeUs = videoDecodeCallBack.getPresentationTimeUs();
             }
             Log.d(TAG, String.format("decode: inputInfo: size %d presentationTimeUs %d ", size, presentationTimeUs));
@@ -137,7 +141,7 @@ public class VideoDecoder {
                 decoder.queueInputBuffer(index, inputInfo.offset, inputInfo.size, inputInfo.presentationTimeUs, inputInfo.flags);
                 if (videoDecodeCallBack != null)
                     videoDecodeCallBack.onInputBuffer();
-                    return true;
+                return true;
             } else {
                 return false;
             }
@@ -149,7 +153,7 @@ public class VideoDecoder {
         if (outputSurface != null) {
             outputSurface.release();
         }
-        if (decoder!=null) {
+        if (decoder != null) {
             decoder.stop();
             decoder.release();
         }
@@ -172,53 +176,70 @@ public class VideoDecoder {
 
             int idx;
             while (mRunning) {
-                try {
-                    outputInfo = new MediaCodec.BufferInfo();
-                    idx = decoder.dequeueOutputBuffer(outputInfo, TIMEOUT_USEC);
-                    Log.i(TAG, "run: dequeueOutputBuffer idx:"+idx);
-                    if (idx == MediaCodec.INFO_TRY_AGAIN_LATER) {
-                        /**没有可用的解码器output*/
-//                        mRunning = false;
-                        Log.i(TAG, "run: INFO_TRY_AGAIN_LATER");
-                    } else if (idx == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
-                        outputBuffers = decoder.getOutputBuffers();
-                    } else if (idx == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-                        Log.i(TAG, "decode output format changed:" + decoder.getOutputFormat().toString());
-                    } else if (idx >= 0) {
-                        boolean doRender = (outputInfo.size != 0 && outputInfo.presentationTimeUs - mFirstSampleTime > mStartTimeUs);
-                        decoder.releaseOutputBuffer(idx, doRender);
-                        Log.d(TAG, "run: doRender:"+doRender);
-                        if (doRender) {
-                            // This waits for the image and renders it after it arrives.
-                            Log.d(TAG, "run: awaitNewImage before");
-                            outputSurface.awaitNewImage();
-
-                            Log.d(TAG, "run: drawImage before");
-                            outputSurface.drawImage();
-                            // Send it to the encoder.
-
-                            Log.d(TAG, "run: outputBuffers.toString():"+outputBuffers.toString());
-                            if (videoDecodeCallBack!=null)
-                            videoDecodeCallBack.onOutputBufferInfo(outputInfo);
-
-                        }
-                        if ((outputInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-                            //callback over
-
-                            mRunning = false;
-                            if (videoDecodeCallBack!=null)
-                            videoDecodeCallBack.decodeOver();
-
-                        }
-                    }
-                } catch (Exception e) {
-                    Log.e(TAG, "dequeueOutputBuffer exception:" + e);
-                    break;
+                if (!decodeOutput()) {
+                    mRunning = false;
                 }
             }
             stop();
             Log.i(TAG, "video hardware decoder output thread exit!");
         }
+    }
+
+    public boolean decodeOutput() {
+        int idx;
+        try {
+            outputInfo = new MediaCodec.BufferInfo();
+            idx = decoder.dequeueOutputBuffer(outputInfo, TIMEOUT_USEC);
+            Log.i(TAG, "run: dequeueOutputBuffer idx:" + idx);
+            if (idx == MediaCodec.INFO_TRY_AGAIN_LATER) {
+                /**没有可用的解码器output*/
+//                        mRunning = false;
+                Log.i(TAG, "run: INFO_TRY_AGAIN_LATER");
+            } else if (idx == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
+                outputBuffers = decoder.getOutputBuffers();
+            } else if (idx == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                Log.i(TAG, "decode output format changed:" + decoder.getOutputFormat().toString());
+            } else if (idx >= 0) {
+                boolean doRender = (outputInfo.size != 0 && outputInfo.presentationTimeUs - mFirstSampleTime > mStartTimeUs);
+                decoder.releaseOutputBuffer(idx, doRender);
+                Log.d(TAG, "run: doRender:" + doRender);
+                if (doRender) {
+                    // This waits for the image and renders it after it arrives.
+                    Log.d(TAG, "run: awaitNewImage before");
+
+//                    if (videoDecodeCallBack != null)
+//                        videoDecodeCallBack.onOutputMakeCurrent();
+
+//                            outputSurface.makeCurrent();
+                    Log.i(TAG, "run: awaitNewImage after");
+                    outputSurface.awaitNewImage();
+                    Log.d(TAG, "run: drawImage before");
+                    outputSurface.drawImage();
+
+                    Log.d(TAG, "run: drawImage after");
+                    // Send it to the encoder.
+                    Log.d(TAG, "run: outputBuffers.toString():" + outputBuffers.toString());
+                    if (videoDecodeCallBack != null)
+                        videoDecodeCallBack.onOutputBufferInfo(outputInfo);
+                    outputSurface.swapBuffers();
+                }
+                if ((outputInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
+                    //callback over
+
+//                    mRunning = false;
+
+                    if (videoDecodeCallBack != null)
+                        videoDecodeCallBack.decodeOver();
+                    return false;
+                }
+
+                return true;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "dequeueOutputBuffer exception:" + e);
+            return true;
+        }
+        return false;
     }
 
     public interface VideoDecodeCallBack {
@@ -230,6 +251,8 @@ public class VideoDecoder {
         void onInputBuffer();
 
         void onOutputBuffer(byte[] bytes);
+
+        void onOutputMakeCurrent();
 
         void onOutputBufferInfo(MediaCodec.BufferInfo bufferInfo);
 

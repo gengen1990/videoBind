@@ -7,6 +7,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
+import com.hanzi.videobinddemo.filter.NoFilter;
 import com.hanzi.videobinddemo.media.MediaBind;
 import com.hanzi.videobinddemo.media.Variable.MediaBean;
 import com.hanzi.videobinddemo.media.Variable.MediaBindInfo;
@@ -59,8 +60,9 @@ public class MainActivity extends AppCompatActivity {
                 MediaBindInfo mediaBindInfo = new MediaBindInfo();
 
                 List<MediaBean> mediaBeans = new ArrayList<>();
-                mediaBeans.add(new MediaBean(finalinputFilePath1, 0));
-//                mediaBeans.add(new MediaBean(finalinputFilePath2, 0));
+//                mediaBeans.add(new MediaBean(finalinputFilePath1, 0));
+                mediaBeans.add(new MediaBean(finalinputFilePath2, 0));
+                mediaBindInfo.setFilter(new NoFilter(MainActivity.this.getResources()));
 
                 mediaBindInfo.setMediaBeans(mediaBeans);
 

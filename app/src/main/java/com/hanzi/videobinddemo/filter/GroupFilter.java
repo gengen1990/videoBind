@@ -2,6 +2,7 @@ package com.hanzi.videobinddemo.filter;
 
 import android.content.res.Resources;
 import android.opengl.GLES20;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,6 +14,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 public class GroupFilter extends AFilter{
 
+     private static final String TAG = GroupFilter.class.getSimpleName();
     private Queue<AFilter> mFilterQueue;
     private List<AFilter> mFilters;
     private int width=0, height=0;
@@ -57,7 +59,6 @@ public class GroupFilter extends AFilter{
         updateFilter();
         textureIndex=0;
         GLES20.glViewport(0,0,width,height);
-
         for (AFilter filter:mFilters){
             GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, fFrame[0]);
             GLES20.glFramebufferTexture2D(GLES20.GL_FRAMEBUFFER, GLES20.GL_COLOR_ATTACHMENT0,
@@ -76,10 +77,15 @@ public class GroupFilter extends AFilter{
     }
 
     private void updateFilter(){
+        if (mFilters==null) {
+            return;
+        }
         AFilter f;
         while ((f=mFilterQueue.poll())!=null){
+            Log.i(TAG, "updateFilter: create");
             f.create();
             f.setSize(width,height);
+
             mFilters.add(f);
             size++;
         }

@@ -197,6 +197,8 @@ public class VideoDrawer implements GLSurfaceView.Renderer {
 
     @Override
     public void onDrawFrame(GL10 gl) {
+        Log.i(TAG, "onDrawFrame: showWidth:"+showWidth);
+        Log.i(TAG, "onDrawFrame: showHeight:"+showHeight);
         ++framePosition;
         bindImage();
         surfaceTexture.updateTexImage();
@@ -204,10 +206,8 @@ public class VideoDrawer implements GLSurfaceView.Renderer {
         GLES20.glViewport(0, 0, showWidth, showHeight);
         mRotationOESFilter.draw();
         EasyGlUtils.unBindFrameBuffer();
-
         mGroupFilter.setTextureId(fTexture[0]);
         mGroupFilter.draw();
-
         mProcessFilter.setTextureId(mGroupFilter.getOutputTexture());
         ((ProcessFilter) mProcessFilter).setFramePosition(framePosition);
         mProcessFilter.draw();

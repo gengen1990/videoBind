@@ -72,7 +72,7 @@ public class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
        this.mMediaBean = mediaBean;
        this.mFilter =filter;
         setup();
-
+        eglSetup(mMediaBean.getVideoWidth(),mMediaBean.getVideoHeight());
     }
 
     /**
@@ -91,8 +91,8 @@ public class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
                 ((BlendingFilter) mFilter).setBinding(true);
                 ((BlendingFilter) mFilter).releaseTextures();
                 Log.d(TAG, "setup: blendingFilter");
+                mDrawer.setFilter(mFilter);
             }
-            mDrawer.setFilter(mFilter);
         }
         Log.i(TAG, "setup: videoWidth:"+mMediaBean.getVideoWidth());
         Log.i(TAG, "setup: videoHeight:"+mMediaBean.getVideoHeight());
@@ -326,4 +326,18 @@ public class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
     public void onVideoSizeChanged(VideoInfo info) {
 //        mTextureRender.onVideoSizeChanged(info);
     }
+
+    /**
+     * Calls eglSwapBuffers.  Use this to "publish" the current frame.
+     *
+     * @return false on failure
+     */
+    public boolean swapBuffers() {
+        boolean result =  mEGL.eglSwapBuffers(mEGLDisplay,mEGLSurface);
+        if (!result) {
+            Log.i(TAG, "WARNING: swapBuffers() failed");
+        }
+        return result;
+    }
+
 }
