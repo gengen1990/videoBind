@@ -39,7 +39,7 @@ public class VideoDecoder {
     private OutputSurface outputSurface;
     private AFilter mFilter;
 
-    final static int TIMEOUT_USEC = -1;
+    final static int TIMEOUT_USEC = 0;
 
     private long mFirstSampleTime;
     private long mStartTimeUs;
@@ -48,8 +48,6 @@ public class VideoDecoder {
                     int width, int height, long firstSampleTime, long startTimeUs, VideoDecodeCallBack videoDecodeCallback) {
         try {
 
-            Log.i(TAG, "open: mFirstSampleTime:" + firstSampleTime);
-            Log.i(TAG, "open: startTimeUs:" + startTimeUs);
             decoder = MediaCodec.createDecoderByType(trackFormat.getString(MediaFormat.KEY_MIME));
 
             if (filter != null && filter instanceof BlendingFilter) {
@@ -74,6 +72,7 @@ public class VideoDecoder {
         decoder.start();
         inputBuffers = decoder.getInputBuffers();
         outputBuffers = decoder.getOutputBuffers();
+        outputInfo = new MediaCodec.BufferInfo();
         inputInfo = new MediaCodec.BufferInfo();
 
         if (outputsync) {
@@ -112,6 +111,7 @@ public class VideoDecoder {
 
     public boolean decode(boolean beEndOfStream) {
         int index = decoder.dequeueInputBuffer(TIMEOUT_USEC);
+
         mBeEndOfStream = beEndOfStream;
 
         if (index >= 0) {
@@ -168,13 +168,7 @@ public class VideoDecoder {
         @Override
         public void run() {
             Log.i(TAG, "video hardware decoder output thread running");
-//            if (mRunning) {
-//                Log.e(TAG, "video hardware decoder start again!");
-//                return;
-//            }
             mRunning = true;
-
-            int idx;
             while (mRunning) {
                 if (!decodeOutput()) {
                     mRunning = false;
@@ -188,7 +182,7 @@ public class VideoDecoder {
     public boolean decodeOutput() {
         int idx;
         try {
-            outputInfo = new MediaCodec.BufferInfo();
+            Log.i(TAG, "decodeOutput: before");
             idx = decoder.dequeueOutputBuffer(outputInfo, TIMEOUT_USEC);
             Log.i(TAG, "run: dequeueOutputBuffer idx:" + idx);
             if (idx == MediaCodec.INFO_TRY_AGAIN_LATER) {
@@ -204,24 +198,16 @@ public class VideoDecoder {
                 decoder.releaseOutputBuffer(idx, doRender);
                 Log.d(TAG, "run: doRender:" + doRender);
                 if (doRender) {
-                    // This waits for the image and renders it after it arrives.
-                    Log.d(TAG, "run: awaitNewImage before");
-
 //                    if (videoDecodeCallBack != null)
 //                        videoDecodeCallBack.onOutputMakeCurrent();
 
-//                            outputSurface.makeCurrent();
-                    Log.i(TAG, "run: awaitNewImage after");
+//                    outputSurface.makeCurrent();
                     outputSurface.awaitNewImage();
-                    Log.d(TAG, "run: drawImage before");
                     outputSurface.drawImage();
 
-                    Log.d(TAG, "run: drawImage after");
-                    // Send it to the encoder.
-                    Log.d(TAG, "run: outputBuffers.toString():" + outputBuffers.toString());
                     if (videoDecodeCallBack != null)
                         videoDecodeCallBack.onOutputBufferInfo(outputInfo);
-                    outputSurface.swapBuffers();
+//                    outputSurface.swapBuffers();
                 }
                 if ((outputInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
                     //callback over
@@ -239,7 +225,7 @@ public class VideoDecoder {
             Log.e(TAG, "dequeueOutputBuffer exception:" + e);
             return true;
         }
-        return false;
+        return true;
     }
 
     public interface VideoDecodeCallBack {

@@ -18,11 +18,12 @@ public class VideoEncoder {
     private final static String TAG = "VideoEncoder";
     private MediaCodec encoder;
     private InputSurface inputSurface;
-    final int TIMEOUT_USEC = -1;
+    final int TIMEOUT_USEC = 0;
 
     ByteBuffer[] inputBuffers;
     ByteBuffer[] outputBuffers;
     MediaCodec.BufferInfo inputInfo;
+    MediaCodec.BufferInfo outputInfo;
 
     private Thread mOutputThread;
 
@@ -32,9 +33,7 @@ public class VideoEncoder {
 
     public int open(String encodeType, int width, int height, int frameRate,
                     VideoEncoderCallBack videoEncoderCallback) {
-        Log.d(TAG, "open: frameRate:" + frameRate);
-        Log.d(TAG, "open: width:" + width);
-        Log.d(TAG, "open: height:" + height);
+        Log.i(TAG, String.format("open: frameRate,width,height",frameRate,width,height));
         try {
             encoder = MediaCodec.createEncoderByType(encodeType);
 
@@ -46,7 +45,7 @@ public class VideoEncoder {
 
             encoder.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
             inputSurface = new InputSurface(encoder.createInputSurface());
-//            inputSurface.makeCurrent();
+            inputSurface.makeCurrent();
             this.videoEncoderCallback = videoEncoderCallback;
 
         } catch (IOException e) {
@@ -59,10 +58,8 @@ public class VideoEncoder {
         Log.d(TAG, "start: ");
         encoder.start();
 
-        inputBuffers = encoder.getInputBuffers();
         outputBuffers = encoder.getOutputBuffers();
-        inputInfo = new MediaCodec.BufferInfo();
-
+        outputInfo = new MediaCodec.BufferInfo();
         if(outputsync) {
             mOutputThread = new Thread(new CEncoderRunnable());
             mOutputThread.start();
@@ -72,9 +69,9 @@ public class VideoEncoder {
 
     public boolean encoder(MediaCodec.BufferInfo info) {
 //        inputSurface.makeCurrent();
-        inputSurface.setPresentationTime(info.presentationTimeUs * 1000 );
+        inputSurface.setPresentationTime(info.presentationTimeUs* 1000);//
         inputSurface.swapBuffers();
-        Log.i(TAG, "encoder: swapBuffers after");
+        Log.i(TAG, "encoder: swapBuffers after:"+info.presentationTimeUs*1000);//*1000
         if ((info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
             Log.i(TAG, "encoder: signalEndOfInputStream");
             encoder.signalEndOfInputStream();
@@ -84,7 +81,7 @@ public class VideoEncoder {
     }
 
     public int stop() {
-        stopEncoder();
+//        stopEncoder();
 //        stopThread();
         if (encoder != null) {
             encoder.stop();
@@ -129,67 +126,66 @@ public class VideoEncoder {
 
     public boolean encodeOutput() {
         Log.i(TAG, "video hardware encoder output thread running");
-//            if (mRunning) {
-//                Log.e(TAG, "video hardware decoder start again!");
-//                return;
-//            }
         mRunning = true;
         long lastStamp = -1;
         while (mRunning) {
             try {
-                MediaCodec.BufferInfo outputInfo = new MediaCodec.BufferInfo();
+
                 int index = encoder.dequeueOutputBuffer(outputInfo, TIMEOUT_USEC);
                 Log.i(TAG, "run: index:" + index);
                 if (index == MediaCodec.INFO_TRY_AGAIN_LATER) {
-//                        mRunning = false;
-//                        Log.d(TAG, "run: INFO_TRY_AGAIN_LATER");
-                    continue;
+                        Log.d(TAG, "run: INFO_TRY_AGAIN_LATER");
+                    mRunning = false;
                 } else if (index == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
                     outputBuffers = encoder.getOutputBuffers();
+                    Log.i(TAG, "encodeOutput: ");
                 } else if (index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                     MediaFormat newFormat = encoder.getOutputFormat();
                     Log.d(TAG, "run: newFormat:" + newFormat.toString());
                     if (videoEncoderCallback != null) {
-                        videoEncoderCallback.formatChanged();
+                        videoEncoderCallback.formatChanged(newFormat);
                     }
                 } else if (index < 0) {
 
                 } else {
+                    Log.i(TAG, String.format("encodeOutput: presentationTimeUs:%d,size:%d",outputInfo.presentationTimeUs,outputInfo.size));
                     ByteBuffer outputData = outputBuffers[index];
                     boolean done = (outputInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0;
                     if (done) {
                         if (videoEncoderCallback != null)
                             videoEncoderCallback.encodeOver();
                         mRunning = false;
-                        return false;
+                        return true;
                     }
+
                     if (outputInfo.presentationTimeUs == 0 && !done) {
                         continue;
                     }
-
-                    if (outputInfo.size != 0 && outputInfo.presentationTimeUs > 0) {
+//
+                    if (outputInfo.size != 0 ) {//&& outputInfo.presentationTimeUs > 0
                         outputData.position(outputInfo.offset);
                         outputData.limit(outputInfo.offset + outputInfo.size);
+
                         if (outputInfo.presentationTimeUs > lastStamp) {//为了避免有问题的数据
-                            Log.i(TAG, "run: presentationTimeUs :" + outputInfo.presentationTimeUs);
+                            lastStamp = outputInfo.presentationTimeUs;
                             if (videoEncoderCallback != null)
                                 videoEncoderCallback.onOutputBuffer(outputData, outputInfo);
-                            lastStamp = outputInfo.presentationTimeUs;
+
                         }
                     }
                     encoder.releaseOutputBuffer(index, false);
                 }
-                return true;
+                return false;
             } catch (Exception e) {
                 Log.e(TAG, "dequeueOutputBuffer exception:" + e);
-                return false;
+                return true;
             }
         }
         Log.i(TAG, "video hardware decoder output thread exit!");
-//            stopThread();
+        return false;
     }
 
-    private int stopEncoder() {
+    public int stopEncoder() {
         try {
             int idx = encoder.dequeueInputBuffer(-1);
 
@@ -207,7 +203,7 @@ public class VideoEncoder {
 
         void encodeOver();
 
-        void formatChanged();
+        void formatChanged(MediaFormat mediaFormat);
 
     }
 }

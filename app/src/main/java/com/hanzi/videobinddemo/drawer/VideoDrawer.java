@@ -201,7 +201,7 @@ public class VideoDrawer implements GLSurfaceView.Renderer {
         Log.i(TAG, "onDrawFrame: showHeight:"+showHeight);
         ++framePosition;
         bindImage();
-        surfaceTexture.updateTexImage();
+         surfaceTexture.updateTexImage();
         EasyGlUtils.bindFrameTexture(fFrame[0], fTexture[0]);
         GLES20.glViewport(0, 0, showWidth, showHeight);
         mRotationOESFilter.draw();

@@ -72,7 +72,7 @@ public class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
        this.mMediaBean = mediaBean;
        this.mFilter =filter;
         setup();
-        eglSetup(mMediaBean.getVideoWidth(),mMediaBean.getVideoHeight());
+//        eglSetup(mMediaBean.getVideoWidth(),mMediaBean.getVideoHeight());
     }
 
     /**
