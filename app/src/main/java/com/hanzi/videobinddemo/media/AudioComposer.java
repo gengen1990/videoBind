@@ -640,7 +640,7 @@ public class AudioComposer {
             @Override
             public void onOutputBuffer(byte[] data, MediaCodec.BufferInfo bufferInfo) {
                 if (!resampleDataHashMap.containsKey(index)) {
-                    Log.d(TAG, "onOutputBuffer: put");
+
                     ByteContainer byteContainer = new ByteContainer();
                     resampleDataHashMap.put(index, byteContainer);
                 }
@@ -650,7 +650,6 @@ public class AudioComposer {
 
             @Override
             public void encodeOver() {
-                Log.d(TAG, "encodeOver: index:" + index);
                 resampleIndex.put(index, true);
                 audioEncoder.stop();
                 encoderOverIndex.put(index,true);
@@ -668,10 +667,8 @@ public class AudioComposer {
 
             if (!pcmContainer.get(index).isEmpty() && (!beStop)) {
                 byte[] chunkPcm = pcmContainer.get(index).getData();
-                Log.d(TAG, "inputForEncoder: chunkPcm size:" + chunkPcm.length);
                 audioEncoder.encode(chunkPcm, false);
             } else {
-                Log.d(TAG, "inputForEncoder: over");
                 audioEncoder.encode(null, true);
                 break;
             }

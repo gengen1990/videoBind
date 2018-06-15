@@ -47,7 +47,6 @@ public class VideoDecoder {
     public int open(MediaBean mediaBean, AFilter filter, MediaFormat trackFormat,
                     int width, int height, long firstSampleTime, long startTimeUs, VideoDecodeCallBack videoDecodeCallback) {
         try {
-
             decoder = MediaCodec.createDecoderByType(trackFormat.getString(MediaFormat.KEY_MIME));
 
             if (filter != null && filter instanceof BlendingFilter) {

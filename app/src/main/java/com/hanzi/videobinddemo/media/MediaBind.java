@@ -58,9 +58,14 @@ public class MediaBind {
 
     private MediaBindInfo mediaBindInfo;
 
+    private MediaBindCallback callback;
 
     public MediaBind(int processStragey) {
         this.processStragey = processStragey;
+    }
+
+    public void setCallback(MediaBindCallback callback){
+        this.callback=callback;
     }
 
     public int open(MediaBindInfo bindInfo) {
@@ -77,7 +82,7 @@ public class MediaBind {
     public int start() {
 //        startAudio();
         startVideo();
-        startCombine();
+//        startCombine();
         return 0;
     }
 
@@ -175,6 +180,7 @@ public class MediaBind {
             @Override
             public void onh264Path() {
                 indexVideoAudioOk[1] = true;
+                callback.callback("视频结束");
             }
         });
     }
@@ -277,5 +283,8 @@ public class MediaBind {
         } catch (CloneNotSupportedException e) {
             e.printStackTrace();
         }
+    }
+    public interface MediaBindCallback{
+        public void callback(String content);
     }
 }

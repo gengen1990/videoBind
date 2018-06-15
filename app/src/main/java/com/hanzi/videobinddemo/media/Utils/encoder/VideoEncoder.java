@@ -127,7 +127,7 @@ public class VideoEncoder {
     public boolean encodeOutput() {
         Log.i(TAG, "video hardware encoder output thread running");
         mRunning = true;
-        long lastStamp = -1;
+        long lastPts = -1;
         while (mRunning) {
             try {
 
@@ -161,15 +161,19 @@ public class VideoEncoder {
                     if (outputInfo.presentationTimeUs == 0 && !done) {
                         continue;
                     }
-//
                     if (outputInfo.size != 0 ) {//&& outputInfo.presentationTimeUs > 0
                         outputData.position(outputInfo.offset);
                         outputData.limit(outputInfo.offset + outputInfo.size);
 
-                        if (outputInfo.presentationTimeUs > lastStamp) {//为了避免有问题的数据
-                            lastStamp = outputInfo.presentationTimeUs;
+                        if (outputInfo.presentationTimeUs > lastPts) {//为了避免有问题的数据
+                            lastPts = outputInfo.presentationTimeUs;
+                            MediaCodec.BufferInfo info=new MediaCodec.BufferInfo();
+                            info.presentationTimeUs=outputInfo.presentationTimeUs;
+                            info.size=outputInfo.size;
+                            info.offset = outputInfo.offset;
+                            info.flags=outputInfo.flags;
                             if (videoEncoderCallback != null)
-                                videoEncoderCallback.onOutputBuffer(outputData, outputInfo);
+                                videoEncoderCallback.onOutputBuffer(outputData, info);
 
                         }
                     }
