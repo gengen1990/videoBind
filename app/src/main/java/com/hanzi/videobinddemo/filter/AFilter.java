@@ -3,7 +3,6 @@ package com.hanzi.videobinddemo.filter;
 import android.content.res.Resources;
 import android.opengl.GLES20;
 import android.util.Log;
-import android.util.SparseArray;
 
 import com.hanzi.videobinddemo.utils.MatrixUtils;
 
@@ -19,8 +18,6 @@ import java.util.Arrays;
 public abstract class AFilter implements Cloneable {
 
     private static final String TAG = "Filter";
-
-
 
     public static boolean DEBUG = true;
     /**
@@ -95,11 +92,6 @@ public abstract class AFilter implements Cloneable {
             1.0f, 1.0f,
     };
 
-    private SparseArray<boolean[]> mBools;
-    private SparseArray<int[]> mInts;
-    private SparseArray<float[]> mFloats;
-
-
     public AFilter(Resources mRes) {
         deleteProgram();
         this.mRes = mRes;
@@ -163,50 +155,6 @@ public abstract class AFilter implements Cloneable {
         return mFlag;
     }
 
-    public void setFloat(int type, float... params) {
-        if (mFloats == null) {
-            mFloats = new SparseArray<>();
-        }
-        mFloats.put(type, params);
-    }
-
-    public void setInt(int type, int... params) {
-        if (mInts == null) {
-            mInts = new SparseArray<>();
-        }
-        mInts.put(type, params);
-    }
-
-    public void setBool(int type, boolean... params) {
-        if (mBools == null) {
-            mBools = new SparseArray<>();
-        }
-        mBools.put(type, params);
-    }
-
-    public boolean getBool(int type, int index) {
-        if (mBools == null) return false;
-        boolean[] b = mBools.get(type);
-        return !(b == null || b.length <= index) && b[index];
-    }
-
-    public int getInt(int type, int index) {
-        if (mInts == null) return 0;
-        int[] b = mInts.get(type);
-        if (b == null || b.length <= index) {
-            return 0;
-        }
-        return b[index];
-    }
-
-    public float getFloat(int type, int index) {
-        if (mFloats == null) return 0;
-        float[] b = mFloats.get(type);
-        if (b == null || b.length <= index) {
-            return 0;
-        }
-        return b[index];
-    }
 
     public int getOutputTexture() {
         return -1;

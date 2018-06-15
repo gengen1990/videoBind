@@ -70,29 +70,34 @@ public class MediaBind {
 
     public int open(MediaBindInfo bindInfo) {
         this.mediaBindInfo = bindInfo;
-        initVideoComposer(bindInfo);
-//        initAudioComposer(bindInfo);
-//        initBgmComposer(bindInfo);
 
-//        initMediaAudioMix();
-//        initMediaCombine();
+        initAudioComposer(bindInfo);
+        initBgmComposer(bindInfo);
+        initMediaAudioMix();
+
+        initVideoComposer(bindInfo);
+
+        initMediaCombine();
         return 0;
     }
 
     public int start() {
-//        startAudio();
+        startAudio();
+
         startVideo();
-//        startCombine();
+
+        startCombine();
         return 0;
     }
 
     public int stop() {
-//        audioComposer.stop();
-//        bgmComposer.stop();
-//        audioMix.stop();
-//        mediaCombine.stop();
+        audioComposer.stop();
+        bgmComposer.stop();
+        audioMix.stop();
 
         videoComposer.stop();
+
+        mediaCombine.stop();
         return 0;
     }
 
@@ -131,6 +136,8 @@ public class MediaBind {
             @Override
             public void onFinishWithoutMix() {
                 indexVideoAudioOk[0] = true;
+                if (callback!=null)
+                    callback.callback("音频结束");
             }
         });
     }
@@ -180,6 +187,7 @@ public class MediaBind {
             @Override
             public void onh264Path() {
                 indexVideoAudioOk[1] = true;
+                if (callback!=null)
                 callback.callback("视频结束");
             }
         });
@@ -248,13 +256,19 @@ public class MediaBind {
     }
 
     private void startCombine() {
-        while (indexVideoAudioOk[0] && indexVideoAudioOk[1]) {
-            mediaCombine.open(videoOutFilePath, audioOutFilePath, finalOutFilePath, new MediaCombine.CombineVideoListener() {
-                @Override
-                public void onProgress(int progress) {
+        while (true) {
+            if (indexVideoAudioOk[0] && indexVideoAudioOk[1]) {
+                mediaCombine.open(videoOutFilePath, audioOutFilePath, finalOutFilePath, new MediaCombine.CombineVideoListener() {
+                    @Override
+                    public void onProgress(int progress) {
+                        if (callback != null)
+                            callback.callback("都结束");
+                    }
+                });
+                mediaCombine.start();
+                break;
+            }
 
-                }
-            });
         }
     }
 

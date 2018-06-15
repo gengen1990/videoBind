@@ -97,7 +97,7 @@ public class MainActivity extends AppCompatActivity {
                 MediaBean mediaBean2 =new MediaBean(finalinputFilePath2, 0);
 
                 mediaBeans.add(mediaBean1);
-                mediaBeans.add(mediaBean2);
+//                mediaBeans.add(mediaBean2);
 //                AFilter beatlesFilter= FilterLibrary.getInstance().getFilter("Beatles");
 //                mediaBindInfo.setFilter(beatlesFilter);
 //                mediaBindInfo.setFilter(new NoFilter(MainActivity.this.getResources()));

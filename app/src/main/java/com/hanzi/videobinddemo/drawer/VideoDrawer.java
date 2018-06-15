@@ -185,7 +185,6 @@ public class VideoDrawer implements GLSurfaceView.Renderer {
         Log.i(TAG, "onSurfaceChanged: x:" + (viewWidth - showWidth) / 2);
         Log.i(TAG, "onSurfaceChanged: y:" + (viewHeight - showHeight) / 2);
 
-
         GLES20.glDeleteFramebuffers(1, fFrame, 0);
         GLES20.glDeleteTextures(1, fTexture, 0);
         GLES20.glGenFramebuffers(1, fFrame, 0);
