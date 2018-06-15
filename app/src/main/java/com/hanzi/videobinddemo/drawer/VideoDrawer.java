@@ -253,8 +253,6 @@ public class VideoDrawer implements GLSurfaceView.Renderer {
                             && framePosition <= effectInfo.videoFrameList.get(effectInfo.videoFrameList.size() - 1)) {
 //                        Log.i(TAG, "bindImage: effectInfo.videoFrameList.get(0):"+effectInfo.videoFrameList.get(0));
 //                        Log.i(TAG, "bindImage: effectInfo.videoFrameList.get(effectInfo.videoFrameList.size() - 1):"+effectInfo.videoFrameList.get(effectInfo.videoFrameList.size() - 1));
-                        Log.i(TAG, "bindImage: effectInfo.mfCount:"+effectInfo.mfCount);
-                        Log.i(TAG, "bindImage: effectInfo.mf:"+effectInfo.mf);
                        if (effectInfo.mfCount >= effectInfo.mf) {
 
                             if (effectInfo.effectPos == effectInfo.bitmaps.size() - 1) {
