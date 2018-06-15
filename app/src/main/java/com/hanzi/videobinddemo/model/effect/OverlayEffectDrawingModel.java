@@ -51,13 +51,21 @@ public class OverlayEffectDrawingModel
         super(effectId, x, y);
         this.onEffectDrawingModelListener = onEffectDrawingModelListener;
         loadImage(context);
-        mainHandler = new Handler() {
-            @Override
-            public void handleMessage(android.os.Message i) {
-                drawBitmap((long) (mCurrentTimeUs - mInitialTimeUs + i.what * mFrameTimeUs));
-
-            }
-        };
+//        Looper.prepare();
+//        mainHandler = new Handler() {
+//            @Override
+//            public void handleMessage(android.os.Message i) {
+//
+//                drawBitmap((long) (mCurrentTimeUs - mInitialTimeUs + i.what * mFrameTimeUs));
+//
+//            }
+//        };
+//        ((Activity)context).runOnUiThread(new Runnable() {
+//            @Override
+//            public void run() {
+//                drawBitmap((long) (mCurrentTimeUs - mInitialTimeUs + i.what * mFrameTimeUs));
+//            }
+//        });
     }
 
 
@@ -410,7 +418,7 @@ public class OverlayEffectDrawingModel
         for (int i = 0; i < frameCount; i++) {
             Message msg = new Message();
             msg.what = i;
-            mainHandler.sendMessageDelayed(msg, (long) (mFrameTimeUs / 1000) * i);
+//            mainHandler.sendMessageDelayed(msg, (long) (mFrameTimeUs / 1000) * i);
         }
     }
 }

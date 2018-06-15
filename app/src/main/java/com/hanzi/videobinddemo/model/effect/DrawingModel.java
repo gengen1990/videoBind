@@ -3,7 +3,6 @@ package com.hanzi.videobinddemo.model.effect;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.Parcel;
-import android.os.Parcelable;
 import android.support.annotation.ColorInt;
 import android.support.annotation.Nullable;
 import android.util.Log;
@@ -15,7 +14,7 @@ import com.hanzi.videobinddemo.model.Transform;
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class DrawingModel implements Parcelable {
+public abstract class DrawingModel {
 
     private static final String TAG = DrawingModel.class.getSimpleName();
     public static final int DEFAULT_COLOR = -1;
@@ -73,6 +72,9 @@ public abstract class DrawingModel implements Parcelable {
         mEffectMinTime = mEffectModel.minimumDurationUs;
         mEffectMaxTime = mEffectModel.maximumDurationUs;
 
+        if (mEffectModel.repeatCount<=0) {
+            mEffectModel.repeatCount=1;
+        }
         mFrameTimeUs = ((float) mEffectModel.overlapDurationUs) / (mEffectModel.repeatCount * mEffectModel.imageCount);
         Log.d(TAG, "DrawingModel: mFrameTimeUs:" + mFrameTimeUs);
         Log.d(TAG, "DrawingModel: totalCount:" + (mEffectModel.repeatCount * mEffectModel.imageCount));
@@ -95,87 +97,6 @@ public abstract class DrawingModel implements Parcelable {
         mCenterY = in.readFloat();
         isBitmapSuccess = in.readByte() != 0;
     }
-
-    @Override
-    public void writeToParcel(Parcel dest, int flags) {
-        dest.writeInt(mColor);
-        dest.writeLong(mEffectMinTime);
-        dest.writeLong(mEffectMaxTime);
-        dest.writeInt(mEffectWidth);
-        dest.writeInt(mEffectHeight);
-        dest.writeInt(mDrawingModelId);
-        dest.writeString(mEffectId);
-        dest.writeLong(mInitialTimeUs);
-        dest.writeLong(mDurationUs);
-        dest.writeLong(mCurrentTimeUs);
-        dest.writeTypedArray(mBitmaps, flags);
-        dest.writeFloat(mFrameTimeUs);
-        dest.writeFloat(mCenterX);
-        dest.writeFloat(mCenterY);
-        dest.writeByte((byte) (isBitmapSuccess ? 1 : 0));
-    }
-
-    @Override
-    public int describeContents() {
-        return 0;
-    }
-
-    public static final Creator<DrawingModel> CREATOR = new Creator<DrawingModel>() {
-        @Override
-        public DrawingModel createFromParcel(Parcel in) {
-            return new DrawingModel(in) {
-                @Override
-                public void setSegment(long currentTimeUs, boolean isTranslucent) {
-
-                }
-
-                @Override
-                public void drawBitmap(long timeUs) {
-
-                }
-
-                @Override
-                public void setMatrix(boolean isTranslucent) {
-
-                }
-
-                @Override
-                public Bitmap getRepresentationImage() {
-                    return null;
-                }
-
-                @Override
-                protected void hide() {
-
-                }
-
-                @Override
-                public void release() {
-
-                }
-
-                @Override
-                public void removeFromParent() {
-
-                }
-
-                @Override
-                protected View setupComponents(ViewGroup viewGroup) {
-                    return null;
-                }
-
-                @Override
-                public void playEffect() {
-
-                }
-            };
-        }
-
-        @Override
-        public DrawingModel[] newArray(int size) {
-            return new DrawingModel[size];
-        }
-    };
 
     public static DrawingModel createOverlayEffectDrawingModel(Context context, int width, int height,
                                                                int centerX, int centerY, String effectId,

@@ -3,6 +3,11 @@ package com.hanzi.videobinddemo.core;
 import android.app.Application;
 import android.content.Context;
 
+import com.hanzi.videobinddemo.model.effect.EffectLibrary;
+import com.hanzi.videobinddemo.model.filter.FilterLibrary;
+
+import java.io.IOException;
+
 
 /**
  * Created by qqche_000 on 2017/8/6.
@@ -22,7 +27,12 @@ public class MyApplication extends Application {
 //        screenWidth = mDisplayMetrics.widthPixels;
 //        screenHeight = mDisplayMetrics.heightPixels;
 //        MyUncaughtExceptionHandler.getInstance().init(this);
-
+        try {
+            FilterLibrary.init(mContext);
+            EffectLibrary.init(mContext);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public static Context getContext() {

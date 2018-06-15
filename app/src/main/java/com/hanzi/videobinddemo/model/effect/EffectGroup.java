@@ -25,11 +25,11 @@ public class EffectGroup {
     private boolean lockedForReview = false;
     private String name;
 
-    public EffectModel findEffectModel(String paramString) {
+    public EffectModel findEffectModel(String effectId) {
         int i = 0;
         while (i < effects.size()) {
             EffectModel localEffectModel = (EffectModel) effects.get(i);
-            if (localEffectModel.effectId.equals(paramString)) {
+            if (localEffectModel.effectId.equals(effectId)) {
                 return localEffectModel;
             }
             i += 1;

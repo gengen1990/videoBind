@@ -243,6 +243,7 @@ public class VideoDrawer implements GLSurfaceView.Renderer {
                 //判断整个视频的第几帧需要添加effect
             List<MediaBean.EffectInfo> effectInfos= info.getEffectInfos();
                 for (int i = 0; i < effectInfos.size(); i++) {
+                    Log.i(TAG, "bindImage: size:"+effectInfos.size());
                     MediaBean.EffectInfo effectInfo = effectInfos.get(i);
                     if (effectInfo.mf == 0) {
                         effectInfo.mf = (info.getRate() == 0 ? 15 : info.getRate()) * effectInfo.interval / 1000;
@@ -250,7 +251,12 @@ public class VideoDrawer implements GLSurfaceView.Renderer {
                     if (effectInfo.videoFrameList.size() > 0
                             && framePosition >= effectInfo.videoFrameList.get(0)
                             && framePosition <= effectInfo.videoFrameList.get(effectInfo.videoFrameList.size() - 1)) {
-                        if (effectInfo.mfCount >= effectInfo.mf) {
+//                        Log.i(TAG, "bindImage: effectInfo.videoFrameList.get(0):"+effectInfo.videoFrameList.get(0));
+//                        Log.i(TAG, "bindImage: effectInfo.videoFrameList.get(effectInfo.videoFrameList.size() - 1):"+effectInfo.videoFrameList.get(effectInfo.videoFrameList.size() - 1));
+                        Log.i(TAG, "bindImage: effectInfo.mfCount:"+effectInfo.mfCount);
+                        Log.i(TAG, "bindImage: effectInfo.mf:"+effectInfo.mf);
+                       if (effectInfo.mfCount >= effectInfo.mf) {
+
                             if (effectInfo.effectPos == effectInfo.bitmaps.size() - 1) {
                                 effectInfo.effectPos = 0;
                             } else {
@@ -264,6 +270,7 @@ public class VideoDrawer implements GLSurfaceView.Renderer {
                         effectInfo.effectPos = -1;
                     }
             }
+
             Bitmap bitmap = BitmapUtils.bitmapMix(context, effectInfos, viewWidth, viewHeight);  //无数据，返回null
             effectFilter.setBitmap(bitmap);
             effectFilter.setPosition(0, 0, viewWidth, viewHeight);

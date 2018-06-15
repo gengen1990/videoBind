@@ -276,10 +276,6 @@ public class VideoComposer {
 
                     @Override
                     public void onOutputBuffer(ByteBuffer byteBuffer, MediaCodec.BufferInfo bufferInfo) {
-//                        byte[] dst = new byte[byteBuffer.limit()];
-//                        byteBuffer.get(dst);
-//                        Log.i(TAG, "onOutputBuffer: byte:" + Arrays.toString(dst));
-//                        byteBuffer.flip();
                         if (!muxStarted) {
                             synchronized (lock) {
                                 if (!muxStarted) {
@@ -291,7 +287,6 @@ public class VideoComposer {
                                 }
                             }
                         }
-                        Log.i(TAG, "onOutputBuffer: mOutVideoTrackIndex:"+mOutVideoTrackIndex);
                         mediaFileMuxer.writeSampleData(mOutVideoTrackIndex, byteBuffer, bufferInfo);
                     }
 
