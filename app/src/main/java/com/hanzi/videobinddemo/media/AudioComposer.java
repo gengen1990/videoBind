@@ -121,7 +121,7 @@ public class AudioComposer {
         for (MediaBean bean : mMediaBeans) {
             AudioExtractor extractor = new AudioExtractor(bean.getUrl(), bean.getStartTimeUs(), bean.getEndTimeUs());
             mMediaExtractors.add(extractor);
-            mDuration += extractor.getDurationUs();
+            mDuration += extractor.getCutDurationUs();
             if (outMaxInputSize > extractor.getMaxInputSize()) {
                 outMaxInputSize = extractor.getMaxInputSize();
             }
@@ -237,20 +237,18 @@ public class AudioComposer {
         //分别对需要进行 重采样的数据重新采样
         for (AudioExtractor audioExtractor : mMediaExtractors) {
             long firstSampleTime = audioExtractor.getSampleTime();
-            long durationUs = audioExtractor.getDurationUs();
+            long totalDurationUs = audioExtractor.getTotalDurationUs();
             long startTimeUs = audioExtractor.getStartTimeUs();
             long endTimeUs = audioExtractor.getEndTimeUs();
-            if (endTimeUs != -1 && endTimeUs < durationUs) {
-                durationUs = endTimeUs - startTimeUs;
-            }
+            long cutDurationUs= audioExtractor.getCutDurationUs();
 
-            Log.i(TAG, String.format("startMerge: firstSampleTime:%d, startTimeUs:%d, endtime:%d, durationUs:%d"
-                    , firstSampleTime, startTimeUs, endTimeUs, durationUs));
+            Log.i(TAG, String.format("startMerge: firstSampleTime:%d, startTimeUs:%d, endtime:%d, cutDurationUs:%d"
+                    , firstSampleTime, startTimeUs, endTimeUs, cutDurationUs));
 
             if (resampleIndex.containsKey(index)) {
                 mergeByteBuffer(resampleDataHashMap.get(index));
             } else {
-                mergeWithoutResample(audioExtractor, firstSampleTime, durationUs, startTimeUs, endTimeUs);
+                mergeWithoutResample(audioExtractor, firstSampleTime, cutDurationUs, startTimeUs, endTimeUs);
             }
 
             index++;
@@ -424,20 +422,18 @@ public class AudioComposer {
                 return;
             }
             long firstSampleTime = audioExtractor.getSampleTime();
-            long durationUs = audioExtractor.getDurationUs();
+            long totalDurationUs = audioExtractor.getTotalDurationUs();
             long startTimeUs = audioExtractor.getStartTimeUs();
             long endTimeUs = audioExtractor.getEndTimeUs();
-            if (endTimeUs != -1 && endTimeUs < durationUs) {
-                durationUs = endTimeUs - startTimeUs;
-            }
+            long cutDurationUs = audioExtractor.getCutDurationUs();
 
-            Log.d(TAG, String.format("startResample index %d, firstSampleTime %d,durationUs %d,startTimeUs %d ,endTimeUs %d"
-                    , index, firstSampleTime, durationUs, startTimeUs, endTimeUs));
+            Log.d(TAG, String.format("startResample index %d, firstSampleTime %d,cutDurationUs %d,startTimeUs %d ,endTimeUs %d"
+                    , index, firstSampleTime, cutDurationUs, startTimeUs, endTimeUs));
 
             if (isMix || audioExtractor.isNeedToResample(outSampleRate)) {
                 Log.d(TAG, "startResample resampleIndex index:" + index);
                 resampleIndex.put(index, false);
-                reSamplingOneAudio(index, audioExtractor, firstSampleTime, durationUs, startTimeUs, endTimeUs);
+                reSamplingOneAudio(index, audioExtractor, firstSampleTime, cutDurationUs, startTimeUs, endTimeUs);
             }
             index++;
         }

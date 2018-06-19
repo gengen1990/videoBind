@@ -14,7 +14,8 @@ public class AudioExtractor extends MediaExtractor {
 
     private int sampleRate = 44100;
     private int channelCount = 2;
-    private long durationUs = 0;
+    private long totalDurationUs = 0;
+    private long cutDurationUs = 0;
     private int outSampleRate = 44100;
     private int maxInputSize = 8192;
 
@@ -29,10 +30,14 @@ public class AudioExtractor extends MediaExtractor {
         if (isExistedTrackType(AUDIO_TYPE)) {
             sampleRate = Integer.parseInt(MuxerUtils.getValue(format.toString(), "sample-rate"));
             channelCount = Integer.parseInt(MuxerUtils.getValue(format.toString(), "channel-count"));
-            durationUs = Long.parseLong(MuxerUtils.getValue(format.toString(),"durationUs"));
+            totalDurationUs = Long.parseLong(MuxerUtils.getValue(format.toString(),"durationUs"));
             maxInputSize = Integer.parseInt(MuxerUtils.getValue(format.toString(),"max-input-size"));
-            Log.d(TAG, String.format("audioExtractor setInfo:  sampleRate %d, channelCount %d durationUs %d, maxInputSize %d",
-                    sampleRate, channelCount, durationUs, maxInputSize));
+            Log.d(TAG, String.format("audioExtractor setInfo:  sampleRate %d, channelCount %d totalDurationUs %d, maxInputSize %d",
+                    sampleRate, channelCount, totalDurationUs, maxInputSize));
+           if (startTimeUs>=0 && endTimeUs>startTimeUs && totalDurationUs>=endTimeUs) {
+               cutDurationUs = endTimeUs-startTimeUs;
+           }
+            Log.i(TAG, "setInfo: cutDuration:"+cutDurationUs);
         }
     }
 
@@ -51,8 +56,16 @@ public class AudioExtractor extends MediaExtractor {
         }
     }
 
-    public long getDurationUs() {
-        return durationUs;
+    public long getTotalDurationUs() {
+        return totalDurationUs;
+    }
+
+    public long getCutDurationUs(){
+
+        if (cutDurationUs==0){
+            cutDurationUs=totalDurationUs;
+        }
+        return cutDurationUs;
     }
 
     public int getChannelCount() {

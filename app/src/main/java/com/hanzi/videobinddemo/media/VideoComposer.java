@@ -83,7 +83,7 @@ public class VideoComposer {
         for (MediaBean bean : mMediaBeans) {
             VideoExtractor extractor = new VideoExtractor(bean.getUrl(), bean.getStartTimeUs(), bean.getEndTimeUs());
             mMediaExtractors.add(extractor);
-            mDuration += extractor.getDurationUs();
+            mDuration += extractor.getCutDurationUs();
             if (bean.getVideoWidth() == 0) {
                 bean.setVideoWidth(extractor.getWidth());
             }
@@ -172,18 +172,19 @@ public class VideoComposer {
                 @Override
                 public void run() {
                     long firstSampleTime = videoExtractor.getSampleTime();
-                    long durationUs = videoExtractor.getDurationUs();
+                    long totalDurationUs = videoExtractor.getTotalDurationUs();
                     long startTimeUs = videoExtractor.getStartTimeUs();
                     long endTimeUs = videoExtractor.getEndTimeUs();
-                    if (endTimeUs != -1 && endTimeUs < durationUs) {
-                        durationUs = endTimeUs - startTimeUs;
-                    }
+                    long cutDurationUs =videoExtractor.getCutDurationUs();
+//                    if (endTimeUs != -1 && endTimeUs < totalDurationUs) {
+//                        totalDurationUs = endTimeUs - startTimeUs;
+//                    }
 
-                    Log.d(TAG, String.format("startVideoEdit: firstSampleTime:%d, durationUs:%d, startTimeUs:%d, endTimeUs:%d",
-                            firstSampleTime, durationUs, startTimeUs, endTimeUs));
+                    Log.d(TAG, String.format("startVideoEdit: firstSampleTime:%d, cutDurationUs:%d, startTimeUs:%d, endTimeUs:%d",
+                            firstSampleTime, cutDurationUs, startTimeUs, endTimeUs));
 
                     if (videoExtractor.isNeedToChanged()) {
-                        oneVideoEdit(finalIndex, videoExtractor, firstSampleTime, durationUs, startTimeUs, endTimeUs);
+                        oneVideoEdit(finalIndex, videoExtractor, firstSampleTime, cutDurationUs, startTimeUs, endTimeUs);
                     }
                 }
             });
@@ -202,7 +203,7 @@ public class VideoComposer {
      * @param endTimeUs
      */
     private void oneVideoEdit(int index, final VideoExtractor videoExtractor, final long firstSampleTime, final long durationUs, final long startTimeUs, long endTimeUs) {
-        videoExtractor.seekTo(firstSampleTime + startTimeUs, SEEK_TO_PREVIOUS_SYNC);
+        videoExtractor.seekTo(firstSampleTime , SEEK_TO_PREVIOUS_SYNC);//+ startTimeUs
         int width = 0, height = 0, frameRate = 0;
         if (mOutWidth == 0) {
             width = videoExtractor.getWidth();
@@ -227,7 +228,7 @@ public class VideoComposer {
         openDecoder(index, decoder, videoExtractor, encoder, width, height, firstSampleTime, startTimeUs);
         decoder.start(false);
         encoder.start(false);
-
+        Log.i(TAG, String.format("oneVideoEdit: durationUs:%d,startTimeUs:%d",durationUs,startTimeUs));
 //                inputForDecoder2(videoExtractor, firstSampleTime, durationUs, startTimeUs, decoder);
         composer(index,videoExtractor, firstSampleTime, durationUs, startTimeUs, decoder, encoder);
 
@@ -247,6 +248,10 @@ public class VideoComposer {
                     now = -1;
                 }
                 boolean beEndStream = (now >= durationUs || now == -1);
+                Log.i(TAG, "composer: firstSampleTime:"+firstSampleTime);
+                Log.i(TAG, "composer: startTimeUs:"+startTimeUs);
+                Log.i(TAG, "composer: now:"+now);
+                Log.i(TAG, "composer: duraiton:"+durationUs);
                 if (!decoder.decode(beEndStream)) {
                      Log.d(TAG, "composer: decodeInputDone true");
                     decodeInputDone = true;

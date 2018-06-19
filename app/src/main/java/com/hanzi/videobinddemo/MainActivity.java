@@ -9,12 +9,15 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import com.hanzi.videobinddemo.core.MyApplication;
+import com.hanzi.videobinddemo.filter.AFilter;
+import com.hanzi.videobinddemo.filter.NoFilter;
 import com.hanzi.videobinddemo.media.MediaBind;
 import com.hanzi.videobinddemo.media.Variable.MediaBean;
 import com.hanzi.videobinddemo.media.Variable.MediaBindInfo;
 import com.hanzi.videobinddemo.model.effect.DrawingModel;
 import com.hanzi.videobinddemo.model.effect.EffectModel;
 import com.hanzi.videobinddemo.model.effect.OverlayEffectDrawingModel;
+import com.hanzi.videobinddemo.model.filter.FilterLibrary;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -29,7 +32,7 @@ public class MainActivity extends AppCompatActivity {
     private MediaBind mediaBind;
     private static String PATH = Environment.getExternalStorageDirectory().getAbsolutePath();
     private String finalinputFilePath1 = PATH + "/1/ice.mp4";
-    private String finalinputFilePath2 = PATH + "/1/hei.mp4";
+    private String finalinputFilePath2 = PATH + "/1/ice.mp4";
     private String bgmPath = PATH + "/1/Christmas_Story.aac";
 
     private int objectEditWidth = 400, objectEditHeight = 200;
@@ -89,18 +92,19 @@ public class MainActivity extends AppCompatActivity {
 
 
                 MediaBean mediaBean1 = new MediaBean(finalinputFilePath1, 0);
-                List<MediaBean.EffectInfo> effectInfos =new ArrayList<>();
-                MediaBean.EffectInfo effectInfo=addEffectInfoData(drawingModel);
-                effectInfos.add(effectInfo);
-                mediaBean1.setEffectInfos(effectInfos);
+                mediaBean1.setTime(1000000,9000000);
+//                List<MediaBean.EffectInfo> effectInfos =new ArrayList<>();
+//                MediaBean.EffectInfo effectInfo=addEffectInfoData(drawingModel);
+//                effectInfos.add(effectInfo);
+//                mediaBean1.setEffectInfos(effectInfos);
 
                 MediaBean mediaBean2 =new MediaBean(finalinputFilePath2, 0);
 
                 mediaBeans.add(mediaBean1);
 //                mediaBeans.add(mediaBean2);
-//                AFilter beatlesFilter= FilterLibrary.getInstance().getFilter("Beatles");
-//                mediaBindInfo.setFilter(beatlesFilter);
-//                mediaBindInfo.setFilter(new NoFilter(MainActivity.this.getResources()));
+                AFilter beatlesFilter= FilterLibrary.getInstance().getFilter("Beatles");
+                mediaBindInfo.setFilter(beatlesFilter);
+                mediaBindInfo.setFilter(new NoFilter(MainActivity.this.getResources()));
 
                 mediaBindInfo.setMediaBeans(mediaBeans);
 

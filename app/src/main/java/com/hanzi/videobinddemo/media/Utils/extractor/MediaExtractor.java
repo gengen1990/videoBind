@@ -22,8 +22,8 @@ public class MediaExtractor {
 
     protected int trackIndex = 0;
 
-    private long startTimeUs = 0;
-    private long endTimeUs = -1;
+    protected long startTimeUs = 0;
+    protected long endTimeUs = -1;
 
     public MediaExtractor(String url, int type) {
         try {
@@ -59,6 +59,7 @@ public class MediaExtractor {
             MediaFormat format = mMediaExtractor.getTrackFormat(i);
             if (format.getString(MediaFormat.KEY_MIME).startsWith(mediaType)) {
                 trackIndex = i;
+                Log.i(TAG, "isExistedTrackType: trackIndex:"+trackIndex);
                 this.format = format;
                 this.type = type;
                 return true;

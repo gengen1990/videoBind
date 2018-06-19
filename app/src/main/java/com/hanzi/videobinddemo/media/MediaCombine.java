@@ -45,6 +45,9 @@ public class MediaCombine {
 
         Log.d(TAG, "open: ");
 
+        Log.i(TAG, "open: videoPath:"+videoPath);
+        Log.i(TAG, "open: audioPath:"+audioPath);
+
         videoExtractor = new VideoExtractor(videoPath, 0, -1);
         audioExtractor = new AudioExtractor(audioPath, 0, -1);
 

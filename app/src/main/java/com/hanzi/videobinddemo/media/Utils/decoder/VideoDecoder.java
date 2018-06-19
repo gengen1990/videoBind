@@ -199,7 +199,6 @@ public class VideoDecoder {
                 if (doRender) {
 //                    if (videoDecodeCallBack != null)
 //                        videoDecodeCallBack.onOutputMakeCurrent();
-
 //                    outputSurface.makeCurrent();
                     outputSurface.awaitNewImage();
                     outputSurface.drawImage();

@@ -14,7 +14,8 @@ public class VideoExtractor extends MediaExtractor {
     private int frameRate = 0;
     private int width = 0;
     private int height = 0;
-    private long durationUs = 0;
+    private long totalDurationUs = 0;
+    private long cutDurationUs = 0;
 
     public VideoExtractor(String url, long startTimeUs, long endTimeUs) {
         super(url, VIDEO_TYPE, startTimeUs, endTimeUs);
@@ -28,15 +29,26 @@ public class VideoExtractor extends MediaExtractor {
             frameRate = Integer.parseInt(MuxerUtils.getValue(format.toString(), "frame-rate"));
             width = Integer.parseInt(MuxerUtils.getValue(format.toString(), "width"));
             height = Integer.parseInt(MuxerUtils.getValue(format.toString(), "height"));
-            durationUs = Long.parseLong(MuxerUtils.getValue(format.toString(), "durationUs"));
+            totalDurationUs = Long.parseLong(MuxerUtils.getValue(format.toString(), "durationUs"));
 
-            Log.d(TAG, String.format("VideoExtractor setInfo:  frameRate %d, width %d height %d, durationUs %d",
-                    frameRate, width, height, durationUs));
+            Log.d(TAG, String.format("VideoExtractor setInfo:  frameRate %d, width %d height %d, totalDurationUs %d",
+                    frameRate, width, height, totalDurationUs));
+            if (startTimeUs>=0 && endTimeUs>startTimeUs && endTimeUs<=totalDurationUs) {
+                cutDurationUs = endTimeUs-startTimeUs;
+            }
         }
     }
 
-    public long getDurationUs() {
-        return durationUs;
+    public long getTotalDurationUs() {
+        return totalDurationUs;
+    }
+
+    public long getCutDurationUs(){
+
+        if (cutDurationUs==0){
+            cutDurationUs=totalDurationUs;
+        }
+        return cutDurationUs;
     }
 
     public boolean isNeedToChanged() {

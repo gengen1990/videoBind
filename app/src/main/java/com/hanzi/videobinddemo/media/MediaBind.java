@@ -61,6 +61,8 @@ public class MediaBind {
 
     private MediaBindCallback callback;
 
+    private boolean isAudioMix = false;
+
     public MediaBind(int processStragey) {
         this.processStragey = processStragey;
     }
@@ -71,23 +73,20 @@ public class MediaBind {
 
     public int open(MediaBindInfo bindInfo) {
         this.mediaBindInfo = bindInfo;
-
         initAudioComposer(bindInfo);
         initBgmComposer(bindInfo);
         initMediaAudioMix();
 
-//        initVideoComposer(bindInfo);
+        initVideoComposer(bindInfo);
 
-//        initMediaCombine();
+        initMediaCombine();
         return 0;
     }
 
     public int start() {
         startAudio();
-
-//        startVideo();
-
-//        startCombine();
+        startVideo();
+        startCombine();
         return 0;
     }
 
@@ -95,10 +94,8 @@ public class MediaBind {
         audioComposer.stop();
         bgmComposer.stop();
         audioMix.stop();
-
-//        videoComposer.stop();
-
-//        mediaCombine.stop();
+        videoComposer.stop();
+        mediaCombine.stop();
         return 0;
     }
 
@@ -118,6 +115,7 @@ public class MediaBind {
         audioMixHandlerThread.start();
         audioMixHandler = new Handler(audioMixHandlerThread.getLooper());
         audioMix = new AudioMix();
+        isAudioMix = true;
     }
 
     /**
@@ -154,8 +152,9 @@ public class MediaBind {
 
         MediaBean bgm = info.getBgm();
 
+        //计算当个bgm 音频的长度
         AudioExtractor extractor = new AudioExtractor(bgm.getUrl(), bgm.getStartTimeUs(), bgm.getEndTimeUs());
-        long mBgmDuration =extractor.getDurationUs();
+        long mBgmDuration =extractor.getTotalDurationUs();
         extractor.release();
 
 
@@ -268,6 +267,13 @@ public class MediaBind {
     private void startCombine() {
         while (true) {
             if (videoAudioOkIndex[0] && videoAudioOkIndex[1]) {
+                String audioOutFilePath ;
+                if (isAudioMix) {
+                    audioOutFilePath=this.audioMixFilePath;
+                }else {
+                    audioOutFilePath=this.audioOutFilePath;
+                }
+
                 mediaCombine.open(videoOutFilePath, audioOutFilePath, finalOutFilePath, new MediaCombine.CombineVideoListener() {
                     @Override
                     public void onProgress(int progress) {
@@ -293,7 +299,8 @@ public class MediaBind {
         try {
 
             int count = (int) (mDuration / bgmBean.getDurationUs());
-
+            Log.i(TAG, "setBgmMediaBeansCount: mDuration:"+mDuration);
+            Log.i(TAG, "setBgmMediaBeansCount: bgmBean.getTotalDurationUs:"+bgmBean.getDurationUs());
             Log.i(TAG, "setBgmMediaBeansCount: count:"+count);
             for (int i = 0; i < count; i++) {
                 mediaBeans.add(bgmBean.clone());
