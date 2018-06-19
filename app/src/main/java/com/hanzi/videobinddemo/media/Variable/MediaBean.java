@@ -19,7 +19,7 @@ public class MediaBean implements Cloneable {
 
     private long startTimeUs =0;
     private long endTimeUs =-1;
-    private long duration=-1;
+    private long durationUs =-1;
 
     private int videoRate =15;
     private int videoWidth =0;
@@ -40,7 +40,7 @@ public class MediaBean implements Cloneable {
     }
 
     public void setTime(long duration, long startTime, long endTime) {
-        this.duration= duration;
+        this.durationUs = duration;
         this.startTimeUs = startTime;
         this.endTimeUs = endTime;
     }
@@ -53,8 +53,12 @@ public class MediaBean implements Cloneable {
         return endTimeUs;
     }
 
-    public long getDuration() {
-        return duration;
+    public void  setDurationUs(long durationUs) {
+        this.durationUs = durationUs;
+    }
+
+    public long getDurationUs() {
+        return durationUs;
     }
 
     public int getRate() {

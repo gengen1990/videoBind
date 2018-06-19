@@ -551,7 +551,6 @@ public class AudioComposer {
             File file = new File(outputFilePath);
             FileInputStream fileInputStream = new FileInputStream(file);
             while (fileInputStream.read(buffer) != -1) {
-
                 pcmContainer.get(index).putData(buffer);
             }
         } catch (FileNotFoundException e) {
@@ -612,7 +611,6 @@ public class AudioComposer {
                     openEncoder(index, audioEncoder, outSampleRate, channelCount, maxInputSize);
 
                     inputForEncoder(index, audioEncoder);
-
                 } else {
                     pcmPathHashMap.put(index, path);
                     resampleIndex.put(index, true);
@@ -634,9 +632,7 @@ public class AudioComposer {
         audioEncoder.open(TAG + "Encoder", "audio/mp4a-latm", sampleRate, channelCount, 96000, maxInputSize, new AudioEncoder.AudioEncoderCallBack() {
             @Override
             public void onInputBuffer() {
-
             }
-
             @Override
             public void onOutputBuffer(byte[] data, MediaCodec.BufferInfo bufferInfo) {
                 if (!resampleDataHashMap.containsKey(index)) {

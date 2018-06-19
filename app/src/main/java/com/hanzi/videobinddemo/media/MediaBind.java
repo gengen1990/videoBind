@@ -7,6 +7,7 @@ import android.util.Log;
 
 import com.hanzi.videobinddemo.Constants;
 import com.hanzi.videobinddemo.bean.EffectInfo;
+import com.hanzi.videobinddemo.media.Utils.extractor.AudioExtractor;
 import com.hanzi.videobinddemo.media.Variable.MediaBean;
 import com.hanzi.videobinddemo.media.Variable.MediaBindInfo;
 
@@ -48,10 +49,10 @@ public class MediaBind {
 
     private String videoOutFilePath = PATH + "/1/video.mp4";
 
-    private boolean[] indexPcmMixOk = new boolean[]{false, false};
+    private boolean[] pcmMixOkIndex = new boolean[]{false, false};
     private String[] pcmMixPaths = new String[2];
 
-    private boolean[] indexVideoAudioOk = new boolean[]{false, false};
+    private boolean[] videoAudioOkIndex = new boolean[]{false, false};
 
     private Handler audioMixHandler;
     private HandlerThread audioMixHandlerThread;
@@ -75,18 +76,18 @@ public class MediaBind {
         initBgmComposer(bindInfo);
         initMediaAudioMix();
 
-        initVideoComposer(bindInfo);
+//        initVideoComposer(bindInfo);
 
-        initMediaCombine();
+//        initMediaCombine();
         return 0;
     }
 
     public int start() {
         startAudio();
 
-        startVideo();
+//        startVideo();
 
-        startCombine();
+//        startCombine();
         return 0;
     }
 
@@ -95,9 +96,9 @@ public class MediaBind {
         bgmComposer.stop();
         audioMix.stop();
 
-        videoComposer.stop();
+//        videoComposer.stop();
 
-        mediaCombine.stop();
+//        mediaCombine.stop();
         return 0;
     }
 
@@ -128,14 +129,14 @@ public class MediaBind {
         audioComposer.setAudioComposerCallBack(new AudioComposer.AudioComposerCallBack() {
             @Override
             public void onPcmPath(String path) {
-                indexPcmMixOk[0] = true;
+                pcmMixOkIndex[0] = true;
                 pcmMixPaths[0] = path;
                 Log.d(TAG, "onPcmPath: 0");
 
             }
             @Override
             public void onFinishWithoutMix() {
-                indexVideoAudioOk[0] = true;
+                videoAudioOkIndex[0] = true;
                 if (callback!=null)
                     callback.callback("音频结束");
             }
@@ -148,23 +149,32 @@ public class MediaBind {
      */
     private void initBgmComposer(MediaBindInfo info) {
         if (info.getBgm() == null) return;
-        long mDuration = audioComposer.getDurationUs();
-        Log.d(TAG, "initBgmComposer: mDuration:" + mDuration);
+        long mAudioDuration = audioComposer.getDurationUs();
+        Log.d(TAG, "initBgmComposer: mDuration:" + mAudioDuration);
+
         MediaBean bgm = info.getBgm();
 
-        if (mDuration <= 0) {
-            mDuration = bgm.getDuration();
+        AudioExtractor extractor = new AudioExtractor(bgm.getUrl(), bgm.getStartTimeUs(), bgm.getEndTimeUs());
+        long mBgmDuration =extractor.getDurationUs();
+        extractor.release();
+
+
+
+        bgm.setDurationUs(mBgmDuration);
+
+        if (mAudioDuration <= 0) {
+            mAudioDuration = bgm.getDurationUs();
         }
 
         //calculate the mediaBeans's number ,add the repeatBgm file
         List<MediaBean> mediaBeans = new ArrayList<>();
-        setBgmMediaBeansCount(mDuration, bgm, mediaBeans);
+        setBgmMediaBeansCount(mAudioDuration, bgm, mediaBeans);
 
-        bgmComposer = new AudioComposer("bgmComposer", mediaBeans, mDuration, bgmOutFilePath, true);
+        bgmComposer = new AudioComposer("bgmComposer", mediaBeans, mAudioDuration, bgmOutFilePath, true);
         bgmComposer.setAudioComposerCallBack(new AudioComposer.AudioComposerCallBack() {
             @Override
             public void onPcmPath(String path) {
-                indexPcmMixOk[1] = true;
+                pcmMixOkIndex[1] = true;
                 pcmMixPaths[1] = path;
                 Log.d(TAG, "onPcmPath: 1");
 
@@ -186,7 +196,7 @@ public class MediaBind {
         videoComposer.setVideoComposerCallBack(new VideoComposer.VideoComposerCallBack() {
             @Override
             public void onh264Path() {
-                indexVideoAudioOk[1] = true;
+                videoAudioOkIndex[1] = true;
                 if (callback!=null)
                 callback.callback("视频结束");
             }
@@ -208,7 +218,7 @@ public class MediaBind {
                 @Override
                 public void run() {
                     while (true) {
-                        if (indexPcmMixOk[0] && indexPcmMixOk[1]) {
+                        if (pcmMixOkIndex[0] && pcmMixOkIndex[1]) {
 
                     pcmMixPaths[0]= Constants.getPath("audio/", "audio" + "outPcm" + ".pcm");
                     pcmMixPaths[1]= Constants.getPath("audio/", "bgm" + "outPcm" + ".pcm");
@@ -217,7 +227,7 @@ public class MediaBind {
                             audioMix.setOnFinishListener(new AudioMix.FinishListener() {
                                 @Override
                                 public void onFinish() {
-                                    indexVideoAudioOk[0] = true;
+                                    videoAudioOkIndex[0] = true;
                                     Log.d(TAG, "audioMixHandler onFinish: ");
                                 }
                             });
@@ -257,7 +267,7 @@ public class MediaBind {
 
     private void startCombine() {
         while (true) {
-            if (indexVideoAudioOk[0] && indexVideoAudioOk[1]) {
+            if (videoAudioOkIndex[0] && videoAudioOkIndex[1]) {
                 mediaCombine.open(videoOutFilePath, audioOutFilePath, finalOutFilePath, new MediaCombine.CombineVideoListener() {
                     @Override
                     public void onProgress(int progress) {
@@ -282,15 +292,17 @@ public class MediaBind {
         long endTime;
         try {
 
-            int count = 3;//(int) (mDuration / bgmBean.getDuration());
+            int count = (int) (mDuration / bgmBean.getDurationUs());
+
+            Log.i(TAG, "setBgmMediaBeansCount: count:"+count);
             for (int i = 0; i < count; i++) {
                 mediaBeans.add(bgmBean.clone());
             }
 
-            endTime =  mDuration % bgmBean.getDuration();
+            endTime =  mDuration % bgmBean.getDurationUs();
             if (endTime != 0) {
                 MediaBean mediaBean = bgmBean.clone();
-                mediaBean.setTime(bgmBean.getDuration(), 0, endTime);
+                mediaBean.setTime(bgmBean.getDurationUs(), 0, endTime);
                 mediaBeans.add(mediaBean);
             }
 
