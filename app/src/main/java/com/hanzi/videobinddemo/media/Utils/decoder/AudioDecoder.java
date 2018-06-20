@@ -162,9 +162,9 @@ public class AudioDecoder {
                         Log.d(TAG, "run: bufferinfo:" + outputInfo.presentationTimeUs);
 
                         //callback send the buffer
-
+                        long pts= outputInfo.presentationTimeUs;
                         if (audioDecodeCallBack != null)
-                            audioDecodeCallBack.onOutputBuffer(chunkPCM);
+                            audioDecodeCallBack.onOutputBuffer(chunkPCM, pts);
 //                        }
 
                         decoder.releaseOutputBuffer(idx, false);
@@ -193,7 +193,7 @@ public class AudioDecoder {
 
         void onInputBuffer();
 
-        void onOutputBuffer(byte[] bytes);
+        void onOutputBuffer(byte[] bytes,long presentationTimeUs);
 
         void decodeOver();
     }

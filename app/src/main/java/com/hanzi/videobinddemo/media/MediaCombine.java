@@ -31,6 +31,8 @@ public class MediaCombine {
 
     private int videoTrackIndex = 0, audioTrackIndex = 0;
 
+    private long mDuration=0;
+
     private MediaFileMuxer mediaFileMuxer;
 
     private AudioExtractor audioExtractor;
@@ -41,7 +43,7 @@ public class MediaCombine {
     private boolean[] isWriteOK = new boolean[]{false, false};
     private boolean beStop = false;
 
-    public boolean open(String videoPath, String audioPath, String outPath, CombineVideoListener combineVideoListener) {
+    public boolean open(String videoPath, String audioPath, String outPath,long duration, CombineVideoListener combineVideoListener) {
 
         Log.d(TAG, "open: ");
 
@@ -62,6 +64,7 @@ public class MediaCombine {
         videoTrackIndex = mediaFileMuxer.addTrack(videoFormat);
         audioTrackIndex = mediaFileMuxer.addTrack(audioFormat);
 
+        mDuration= duration;
 
         audioThread = new HandlerThread("audio");
         videoThread = new HandlerThread("video");
@@ -95,7 +98,7 @@ public class MediaCombine {
                         audioExtractor.release();
                         videoExtractor.release();
                         if (combineVideoListener != null)
-                            combineVideoListener.onProgress(0);
+                            combineVideoListener.onProgress(100);
                         break;
                     }
                 }
@@ -136,10 +139,30 @@ public class MediaCombine {
                 bufferInfo.offset = 0;
                 bufferInfo.flags = extractor.getSampleFlags();
                 mediaFileMuxer.writeSampleData(trackIndex, byteBuffer, bufferInfo);
+
+                if (index==1) {
+                    mergeProgress(bufferInfo.presentationTimeUs);
+                }
                 extractor.advance();
             }
             Log.i(TAG, "run: isWriteOk:"+isWriteOK[index]);
             isWriteOK[index] = true;
+        }
+    }
+
+    private void mergeProgress(long pts) {
+        if (combineVideoListener != null) {
+            int RATE, exRate;
+            RATE = MediaBind.VIDEO_MERGE_RATE;
+            exRate = MediaBind.VIDEO_RECODE_RATE;
+
+            float rate = (float)pts / mDuration;
+            if (rate > 1) {
+                rate = 1;
+            }
+            Log.i(TAG, "noMixMergeProgress: rate:" + rate);
+            Log.i(TAG, "noMixMergeProgress: merge:" + (exRate + RATE * rate));
+            combineVideoListener.onProgress((int) (exRate + RATE * rate));
         }
     }
 

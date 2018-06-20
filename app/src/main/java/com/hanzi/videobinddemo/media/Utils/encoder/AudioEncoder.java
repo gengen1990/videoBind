@@ -174,7 +174,7 @@ public class AudioEncoder {
                         Log.d(TAG, "run: outputInfo.size:"+outputInfo.size);
 
                         if (outputInfo.size != 0 && outputInfo.presentationTimeUs > 0) {
-                            Log.d(TAG, "run: outputData.limit():" + outputData.limit());
+//                            Log.d(TAG, "run: outputData.limit():" + outputData.limit());
                             Log.d(TAG, String.format("output: index %d size %d presentationTimeUs:%d", index, outputInfo.size, outputInfo.presentationTimeUs));
 //                            if (outputInfo.presentationTimeUs > lastStamp) {//为了避免有问题的数据
                             byte[] data = new byte[outputData.limit()];

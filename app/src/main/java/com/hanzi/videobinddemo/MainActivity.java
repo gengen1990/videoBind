@@ -28,11 +28,12 @@ public class MainActivity extends AppCompatActivity {
 
     private final static String TAG="MainActivity";
     private Button merge,stop;
+    private TextView audioType ,audioRate, videoType,videoRate, combineRate;
 
     private MediaBind mediaBind;
     private static String PATH = Environment.getExternalStorageDirectory().getAbsolutePath();
-    private String finalinputFilePath1 = PATH + "/1/ice.mp4";
-    private String finalinputFilePath2 = PATH + "/1/ice.mp4";
+    private String finalinputFilePath1 = PATH + "/1/water11.mp4";
+    private String finalinputFilePath2 = PATH + "/1/water12.mp4";
     private String bgmPath = PATH + "/1/Christmas_Story.aac";
 
     private int objectEditWidth = 400, objectEditHeight = 200;
@@ -41,6 +42,7 @@ public class MainActivity extends AppCompatActivity {
     public int objectEditInitY = 100;
 
     private DrawingModel drawingModel;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +53,14 @@ public class MainActivity extends AppCompatActivity {
         TextView tv = (TextView) findViewById(R.id.sample_text);
         merge = findViewById(R.id.merger);
         stop = findViewById(R.id.stop);
+
+        audioType=findViewById(R.id.audioType);
+        audioRate = findViewById(R.id.audioRate);
+
+        videoRate=findViewById(R.id.videoRate);
+        videoType = findViewById(R.id.videoType);
+
+        combineRate=findViewById(R.id.combineRate);
 
         merge.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -77,6 +87,48 @@ public class MainActivity extends AppCompatActivity {
                 mediaBind = new MediaBind(MediaBind.BOTH_PROCESS);
                 mediaBind.setCallback(new MediaBind.MediaBindCallback() {
                     @Override
+                    public void onVideoType(final String content) {
+                        MainActivity.this.runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                videoType.setText(content);
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onAudioType(final String content) {
+                        MainActivity.this.runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Log.i(TAG, "run: content:"+content);
+                                audioType.setText(content);
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onVideoRate(final int rate) {
+                        MainActivity.this.runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                videoRate.setText(rate+"");
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onAudioRate(final int rate) {
+                        MainActivity.this.runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Log.i(TAG, "run: rate:"+rate);
+                                audioRate.setText(rate+"");
+                            }
+                        });
+                    }
+
+                    @Override
                     public void callback(final String content) {
                         MainActivity.this.runOnUiThread(new Runnable() {
                             @Override
@@ -85,6 +137,17 @@ public class MainActivity extends AppCompatActivity {
                             }
                         });
                     }
+
+                    @Override
+                    public void onCombineRate(final int rate) {
+                        MainActivity.this.runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                combineRate.setText(rate+"");
+                            }
+                        });
+
+                    }
                 });
                 MediaBindInfo mediaBindInfo = new MediaBindInfo();
 
@@ -92,7 +155,7 @@ public class MainActivity extends AppCompatActivity {
 
 
                 MediaBean mediaBean1 = new MediaBean(finalinputFilePath1, 0);
-                mediaBean1.setTime(1000000,9000000);
+//                mediaBean1.setTime(1000000,19000000);
                 List<MediaBean.EffectInfo> effectInfos =new ArrayList<>();
                 MediaBean.EffectInfo effectInfo=addEffectInfoData(drawingModel);
                 effectInfos.add(effectInfo);
@@ -101,7 +164,7 @@ public class MainActivity extends AppCompatActivity {
                 MediaBean mediaBean2 =new MediaBean(finalinputFilePath2, 0);
 
                 mediaBeans.add(mediaBean1);
-//                mediaBeans.add(mediaBean2);
+                mediaBeans.add(mediaBean2);
                 AFilter beatlesFilter= FilterLibrary.getInstance().getFilter("Beatles");
                 mediaBindInfo.setFilter(beatlesFilter);
                 mediaBindInfo.setFilter(new NoFilter(MainActivity.this.getResources()));

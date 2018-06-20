@@ -62,6 +62,8 @@ public class AudioComposer {
 
     private AudioComposerCallBack audioComposerCallBack;
 
+    private AudioProgressCallBack audioProgressCallBack;
+
     /**
      * 重采样后，未编码的数据
      */
@@ -93,6 +95,10 @@ public class AudioComposer {
      * 需要输出的pcm 地址
      */
     private HashMap<Integer, String> pcmPathHashMap = new HashMap<>();
+
+    //计算 在重采样中需要
+    private HashMap<Integer, Integer> noMixResampleRateIndex = new HashMap<>();
+    private HashMap<Integer, Integer> mixResampleRateIndex = new HashMap<>();
 
     /**
      * judge all the audio's url is the same
@@ -145,6 +151,15 @@ public class AudioComposer {
         this.outChannelCount = channelCount;
 
         this.isMix = isMix;
+
+        if (audioProgressCallBack != null) {
+            if (isMix) {
+                audioProgressCallBack.onAudioType("音频拼接（添加背景音乐）");
+            } else {
+                audioProgressCallBack.onAudioType("音频拼接（不添加背景音乐）");
+            }
+        }
+
         Log.d(TAG, "start: outSampleRate:" + this.outSampleRate);
         Log.d(TAG, "start: channelCount:" + channelCount);
         startMuxer();
@@ -240,7 +255,7 @@ public class AudioComposer {
             long totalDurationUs = audioExtractor.getTotalDurationUs();
             long startTimeUs = audioExtractor.getStartTimeUs();
             long endTimeUs = audioExtractor.getEndTimeUs();
-            long cutDurationUs= audioExtractor.getCutDurationUs();
+            long cutDurationUs = audioExtractor.getCutDurationUs();
 
             Log.i(TAG, String.format("startMerge: firstSampleTime:%d, startTimeUs:%d, endtime:%d, cutDurationUs:%d"
                     , firstSampleTime, startTimeUs, endTimeUs, cutDurationUs));
@@ -296,6 +311,7 @@ public class AudioComposer {
                         mOutAudioTrackIndex, info.size, info.presentationTimeUs, info.flags, info.offset));
                 if (info.size > 0 && info.presentationTimeUs > 0) {
                     mediaFileMuxer.writeSampleData(mOutAudioTrackIndex, mReadBuf, info);//写入文件
+                    noMixMergeProgress(info);
                 }
                 audioExtractor.advance();
             }
@@ -326,6 +342,7 @@ public class AudioComposer {
             byteBuffer.flip();
             bufferInfo.presentationTimeUs = ptsOffset + bufferInfo.presentationTimeUs;
             mediaFileMuxer.writeSampleData(mOutAudioTrackIndex, byteBuffer, bufferInfo);
+            noMixMergeProgress(bufferInfo);
         }
         ptsOffset += audioPts;
         ptsOffset += 10000L;//test ，如果不添加，如何
@@ -437,6 +454,7 @@ public class AudioComposer {
             }
             index++;
         }
+
     }
 
     /**
@@ -475,8 +493,11 @@ public class AudioComposer {
                 }
 
                 @Override
-                public void onOutputBuffer(byte[] bytes) {
+                public void onOutputBuffer(byte[] bytes, long pts) {
                     try {
+                        if (isMix) {
+                            mixDecodeProgress(index, pts);
+                        }
                         fos.write(bytes);
                         fos.flush();
                     } catch (IOException e) {
@@ -492,7 +513,7 @@ public class AudioComposer {
                         e.printStackTrace();
                     }
                     encodePcm(audioExtractor, mPcmInFilePath, mPcmOutFilePath, 44100, index);
-                    decoderOverIndex.put(index,true);
+                    decoderOverIndex.put(index, true);
                 }
 
                 @Override
@@ -505,7 +526,7 @@ public class AudioComposer {
                     return audioExtractor.getSampleTime();
                 }
             });
-            decoderOverIndex.put(index,false);
+            decoderOverIndex.put(index, false);
             decoder.start();
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -528,10 +549,10 @@ public class AudioComposer {
             long now;
             if (!beStop) {
                 now = audioExtractor.getSampleTime() - firstSampleTime - startTimeUs;
-            }else {
-                now=-1;
+            } else {
+                now = -1;
             }
-            boolean beEndOfStream = (now >= durationUs || now == -1) ;
+            boolean beEndOfStream = (now >= durationUs || now == -1);
             if (!decoder.decode(beEndOfStream)) {
                 isRunning = false;
             }
@@ -578,6 +599,7 @@ public class AudioComposer {
                 int inputSampleRate = audioExtractor.getInitSampleRate();
                 int channelCount = audioExtractor.getChannelCount();
                 int maxInputSize = audioExtractor.getMaxInputSize();
+                long cutDurationUs = audioExtractor.getCutDurationUs();
                 Log.d(TAG, String.format("decodeOver " +
                                 "index %d, inputFilePath %s, outputFilePath %s,inputSampleRate %d,outSampleRate %d ,channelCount %d, maxInputSize %d"
                         , index, mPcmInFilePath, mPcmOutFilePath, inputSampleRate
@@ -594,6 +616,7 @@ public class AudioComposer {
                     path = mPcmInFilePath;
                 }
                 if (!isMix) {
+                    //如果非混音，直接 编码输出
                     pcmContainer.put(index, new ByteContainer()); //= new ByteContainer();
 //                                    new Thread(new Runnable() {
 //                                        @Override
@@ -604,10 +627,11 @@ public class AudioComposer {
                     AudioEncoder audioEncoder = new AudioEncoder();
 
 
-                    openEncoder(index, audioEncoder, outSampleRate, channelCount, maxInputSize);
+                    openEncoder(index, audioEncoder, outSampleRate, channelCount, maxInputSize, cutDurationUs);
 
                     inputForEncoder(index, audioEncoder);
                 } else {
+                    //如果混音，先放到某个文件中
                     pcmPathHashMap.put(index, path);
                     resampleIndex.put(index, true);
                 }
@@ -624,11 +648,12 @@ public class AudioComposer {
      * @param channelCount
      * @param maxInputSize
      */
-    private void openEncoder(final int index, final AudioEncoder audioEncoder, int sampleRate, int channelCount, int maxInputSize) {
+    private void openEncoder(final int index, final AudioEncoder audioEncoder, int sampleRate, int channelCount, int maxInputSize, final long durationUs) {
         audioEncoder.open(TAG + "Encoder", "audio/mp4a-latm", sampleRate, channelCount, 96000, maxInputSize, new AudioEncoder.AudioEncoderCallBack() {
             @Override
             public void onInputBuffer() {
             }
+
             @Override
             public void onOutputBuffer(byte[] data, MediaCodec.BufferInfo bufferInfo) {
                 if (!resampleDataHashMap.containsKey(index)) {
@@ -638,16 +663,18 @@ public class AudioComposer {
                 }
                 resampleDataHashMap.get(index).putData(data);
                 resampleDataHashMap.get(index).putBufferInfo(bufferInfo);
+                Log.i(TAG, "onOutputBuffer: ");
+                noMixResampleProgress(bufferInfo.presentationTimeUs, index);
             }
 
             @Override
             public void encodeOver() {
                 resampleIndex.put(index, true);
                 audioEncoder.stop();
-                encoderOverIndex.put(index,true);
+                encoderOverIndex.put(index, true);
             }
         });
-        encoderOverIndex.put(index,false);
+        encoderOverIndex.put(index, false);
         audioEncoder.start();
     }
 
@@ -664,6 +691,75 @@ public class AudioComposer {
                 audioEncoder.encode(null, true);
                 break;
             }
+        }
+    }
+
+    private void noMixMergeProgress(MediaCodec.BufferInfo bufferInfo) {
+        if (audioProgressCallBack != null) {
+            int RATE, exRate;
+            if (resampleIndex.size() == 0) {
+                RATE = MediaBind.NO_AUDIOMIX_MERGE_RATE + MediaBind.NO_AUDIOMIX_RESAMPLE_RATE;
+                exRate = 0;
+            } else {
+                RATE = MediaBind.NO_AUDIOMIX_MERGE_RATE;
+                exRate = MediaBind.NO_AUDIOMIX_RESAMPLE_RATE;
+            }
+
+            float rate = (float) bufferInfo.presentationTimeUs / mDuration;
+            if (rate > 1) {
+                rate = 1;
+            }
+            Log.i(TAG, "noMixMergeProgress: rate:" + rate);
+            Log.i(TAG, "noMixMergeProgress: merge:" + (exRate + RATE * rate));
+            audioProgressCallBack.onProgress((int) (exRate + RATE * rate));
+        }
+    }
+
+    private void mixDecodeProgress(int index, long pts) {
+        if (audioProgressCallBack != null) {
+            mixResampleRateIndex.put(index, (int) pts);
+            int RATE;
+
+            RATE = MediaBind.AUDIOMIX_RESAMPLE_RATE;
+            long sum = 0;
+            for (Integer integer : mixResampleRateIndex.keySet()) {
+                int t = mixResampleRateIndex.get(integer);
+                sum += t;
+            }
+            Log.i(TAG, "onOutputBuffer: sum:" + sum);
+            Log.i(TAG, "onOutputBuffer: duration:" + mDuration);
+
+            float rate = (float) sum / mDuration;
+            if (rate > 1) {
+                rate = 1;
+            }
+            audioProgressCallBack.onProgress((int) (RATE * rate));
+        }
+    }
+
+    /**
+     * 回调重采样进度
+     *
+     * @param pts
+     * @param index
+     */
+    private void noMixResampleProgress(long pts, int index) {
+        Log.d(TAG, "noMixResampleProgress: pts:" + pts);
+        if (audioProgressCallBack != null) {
+            noMixResampleRateIndex.put(index, (int) pts);
+            int sum = 0;
+            for (Integer integer : noMixResampleRateIndex.keySet()) {
+                if (noMixResampleRateIndex.containsKey(integer))
+                    sum += noMixResampleRateIndex.get(integer);
+            }
+            Log.i(TAG, "onOutputBuffer: sum:" + sum);
+            Log.i(TAG, "onOutputBuffer: duration:" + mDuration);
+
+            float rate = ((float) sum / mDuration);
+            if (rate > 1) {
+                rate = 1;
+            }
+            audioProgressCallBack.onProgress((int) (MediaBind.NO_AUDIOMIX_RESAMPLE_RATE * rate));
         }
     }
 
@@ -696,6 +792,10 @@ public class AudioComposer {
         this.audioComposerCallBack = audioComposerCallBack;
     }
 
+    public void setAudioProgressCallBack(AudioProgressCallBack audioProgressCallBack) {
+        this.audioProgressCallBack = audioProgressCallBack;
+    }
+
     public int getChannelCount() {
         return outChannelCount;
     }
@@ -716,6 +816,12 @@ public class AudioComposer {
         void onPcmPath(String path);
 
         void onFinishWithoutMix();
+    }
+
+    public interface AudioProgressCallBack {
+        void onAudioType(String content);
+
+        void onProgress(int rate);
     }
 
 }

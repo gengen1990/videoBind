@@ -65,6 +65,10 @@ public class VideoComposer {
 
     private HashMap<Integer, ByteContainer> videoDataHashMap = new HashMap<>();
 
+    private VideoProgressCallBack videoProgressCallBack;
+
+    private HashMap<Integer,Integer> resampleRateIndex=new HashMap<>();
+
     private long ptsOffset = 0;
 
     public VideoComposer(List<MediaBean> mediaBeans, AFilter filter, int outWidth, int outHeight, String outFilePath) {
@@ -96,6 +100,10 @@ public class VideoComposer {
 //                mOutHeight = bean.getVideoHeight();
 //            }
             mFrameRate = bean.getRate();
+
+            if (videoProgressCallBack!=null) {
+                videoProgressCallBack.onVideoType("视频拼接：");
+            }
         }
 
         mMuxerFormat = mMediaExtractors.get(0).getFormat();
@@ -306,7 +314,7 @@ public class VideoComposer {
                         videoDataHashMap.get(index).putData(dst);
                         videoDataHashMap.get(index).putBufferInfo(bufferInfo);
 
-
+                        resampleProgress(index,bufferInfo.presentationTimeUs);
 //                        if (!muxStarted) {
 //                            synchronized (lock) {
 //                                if (!muxStarted) {
@@ -363,6 +371,7 @@ public class VideoComposer {
             byteBuffer.flip();
             bufferInfo.presentationTimeUs = ptsOffset + bufferInfo.presentationTimeUs;
             mediaFileMuxer.writeSampleData(mOutVideoTrackIndex, byteBuffer, bufferInfo);
+            mergeProgress(bufferInfo.presentationTimeUs);
         }
         ptsOffset += videoPts;
         ptsOffset += 10000L;//test ，如果不添加，如何
@@ -485,7 +494,60 @@ public class VideoComposer {
         return mDuration;
     }
 
+
+    /**
+     * 视频重新编解码的进度
+     *
+     * @param pts
+     * @param index
+     */
+    private void resampleProgress(int index, long pts) {
+        Log.d(TAG, "resampleProgress: pts:" + pts);
+        if (videoProgressCallBack != null) {
+            resampleRateIndex.put(index, (int) pts);
+            int sum = 0;
+            for (Integer integer : resampleRateIndex.keySet()) {
+                    sum += resampleRateIndex.get(integer);
+            }
+            Log.i(TAG, "onOutputBuffer: sum:" + sum);
+            Log.i(TAG, "onOutputBuffer: duration:" + mDuration);
+
+            float rate = ((float) sum / mDuration);
+            if (rate > 1) {
+                rate = 1;
+            }
+            videoProgressCallBack.onProgress((int) (MediaBind.VIDEO_RECODE_RATE * rate));
+        }
+    }
+
+    private void mergeProgress(long pts) {
+        if (videoProgressCallBack != null) {
+            int RATE, exRate;
+                RATE = MediaBind.VIDEO_MERGE_RATE;
+                exRate = MediaBind.VIDEO_RECODE_RATE;
+
+            float rate = (float)pts / mDuration;
+            if (rate > 1) {
+                rate = 1;
+            }
+            Log.i(TAG, "noMixMergeProgress: rate:" + rate);
+            Log.i(TAG, "noMixMergeProgress: merge:" + (exRate + RATE * rate));
+            videoProgressCallBack.onProgress((int) (exRate + RATE * rate));
+        }
+    }
+
+
+    public void setVideoProgressCallBack(VideoProgressCallBack videoProgressCallBack){
+        this.videoProgressCallBack= videoProgressCallBack;
+    }
+
     public interface VideoComposerCallBack {
         public void onh264Path();
+    }
+
+    public interface VideoProgressCallBack {
+        void onVideoType(String content);
+
+        void onProgress(int rate);
     }
 }

@@ -41,19 +41,24 @@ public class AudioMix {
     private Handler encoderHandler;
     private MediaFormat mediaFormat;
 
+    private AudioMixCallBack audioMixCallBack;
+
     private static String PATH = Environment.getExternalStorageDirectory().getAbsolutePath();
     private int mOutAudioTrackIndex;
 
     private boolean beStop = false;
 
+    private long mDurationUs = 0;
+
     private boolean beStopOver = false;
 
     private FinishListener finishListener;
 
-    public int open(String[] inPcmPaths, String outAACPath, MediaFormat mediaFormat, int sampleRate, int channelCount, int maxInputSize) {
+    public int open(String[] inPcmPaths, String outAACPath, MediaFormat mediaFormat, int sampleRate, int channelCount, int maxInputSize, long duration) {
         this.outAACPath = outAACPath;
         this.sampleRate = sampleRate;
         this.mediaFormat = mediaFormat;
+        this.mDurationUs = duration;
         byteContainer = new ByteContainer();
 
         for (int i = 0; i < inPcmPaths.length; i++) {
@@ -86,6 +91,15 @@ public class AudioMix {
                 byteBuffer.flip();
 
                 mediaFileMuxer.writeSampleData(mOutAudioTrackIndex, byteBuffer, bufferInfo);
+
+                if (audioMixCallBack != null) {
+                    float rate = (float) bufferInfo.presentationTimeUs / mDurationUs;
+                    if (rate > 1) {
+                        rate = 1;
+                    }
+                    audioMixCallBack.onProgress((int) (MediaBind.AUDIOMIX_MIX_RATE
+                            + rate * MediaBind.AUDIOMIX_MERGE_RATE));
+                }
             }
 
             @Override
@@ -206,17 +220,23 @@ public class AudioMix {
                     streamDoneArray[streamIndex] = true;
                     allAudioBytes[streamIndex] = new byte[8 * 1024];
                 }
-                Log.i(TAG, "pcmMix: ");
             }
 
             byte[] mixBytes = nativeAudioMix(allAudioBytes, firstVol, secondVol);
 
             byteContainer.putData(mixBytes);
             boolean done = true;
+            int isOk = 0;
             for (boolean streamEnd : streamDoneArray) {
+
                 if (!streamEnd) {
 
                     done = false;
+                } else {
+                    isOk++;
+                }
+                if (audioMixCallBack != null) {
+                    audioMixCallBack.onProgress((int) ((float) isOk / streamDoneArray.length * MediaBind.AUDIOMIX_MIX_RATE));
                 }
             }
             Log.d(TAG, "pcmMix: done：" + done);
@@ -248,7 +268,16 @@ public class AudioMix {
         this.finishListener = finishListener;
     }
 
+    public void setAudioMixCallBack(AudioMixCallBack audioMixCallBack) {
+        this.audioMixCallBack = audioMixCallBack;
+    }
+
     public interface FinishListener {
         public void onFinish();
+    }
+
+    public interface AudioMixCallBack {
+
+        void onProgress(int rate);
     }
 }

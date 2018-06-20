@@ -25,7 +25,7 @@
         android:text="合并"/>
 
     <Button
-        android:layout_below="@+id/merger"
+        android:layout_below="@+id/videoRate"
         android:id="@+id/stop"
         android:layout_width="match_parent"
         android:layout_height="50dp"
@@ -33,5 +33,58 @@
         android:layout_marginRight="20dp"
         android:layout_marginTop="50dp"
         android:text="停止"/>
+    <TextView
+        android:layout_alignLeft="@+id/merger"
+        android:id="@+id/audioType"
+        android:layout_below="@+id/merger"
+        android:layout_width="100dp"
+        android:layout_height="50dp"
+        android:text="音频拼接："
+        />
+    <TextView
+        android:id="@+id/audioRate"
+        android:layout_below="@+id/merger"
+        android:layout_width="100dp"
+        android:layout_height="50dp"
+        android:layout_toRightOf="@+id/audioType"
+        android:text="0"
+        />
+
+    <TextView
+        android:layout_alignLeft="@+id/merger"
+        android:id="@+id/videoType"
+        android:layout_below="@+id/audioType"
+        android:layout_width="100dp"
+        android:layout_height="50dp"
+        android:text="视频拼接："
+        />
+    <TextView
+        android:id="@+id/videoRate"
+        android:layout_below="@+id/audioRate"
+        android:layout_width="100dp"
+        android:layout_height="50dp"
+        android:layout_toRightOf="@+id/videoType"
+        android:text="0"
+        />
+    <TextView
+        android:layout_alignLeft="@+id/merger"
+        android:id="@+id/combineType"
+        android:layout_below="@+id/videoType"
+        android:layout_width="100dp"
+        android:layout_height="50dp"
+        android:text="音视频合并："
+        />
+    <TextView
+        android:id="@+id/combineRate"
+        android:layout_below="@+id/videoRate"
+        android:layout_width="100dp"
+        android:layout_height="50dp"
+        android:layout_toRightOf="@+id/combineType"
+        android:text="0"
+        />
+
+
+
+
 
 </RelativeLayout>

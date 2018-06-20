@@ -26,6 +26,21 @@ public class MediaBind {
     public final static int ONLY_AUDIO_PROCESS = 1;
     public final static int BOTH_PROCESS = 2;
 
+    /**
+     * 进行音频拼接（非混音），采取该比例
+     */
+    public final static int NO_AUDIOMIX_RESAMPLE_RATE = 60;
+    public final static int NO_AUDIOMIX_MERGE_RATE = 40;
+    /**
+     * 进行音频拼接（混音），采取该比例
+     */
+    public final static int AUDIOMIX_RESAMPLE_RATE = 30;
+    public final static int AUDIOMIX_MIX_RATE = 40;
+    public final static int AUDIOMIX_MERGE_RATE = 30;
+
+    public final static int VIDEO_RECODE_RATE = 60;
+    public final static int VIDEO_MERGE_RATE = 40;
+
     private int processStragey = BOTH_PROCESS;
 
     private List<String> urls = new ArrayList<>();
@@ -53,6 +68,8 @@ public class MediaBind {
     private String[] pcmMixPaths = new String[2];
 
     private boolean[] videoAudioOkIndex = new boolean[]{false, false};
+
+    private int[] audioProgress = new int[2];
 
     private Handler audioMixHandler;
     private HandlerThread audioMixHandlerThread;
@@ -177,8 +194,27 @@ public class MediaBind {
             @Override
             public void onFinishWithoutMix() {
                 videoAudioOkIndex[0] = true;
-                if (callback != null)
+                if (callback != null) {
                     callback.callback("音频结束");
+                    callback.onAudioRate(100);
+                }
+            }
+        });
+        audioComposer.setAudioProgressCallBack(new AudioComposer.AudioProgressCallBack() {
+            @Override
+            public void onAudioType(String content) {
+                Log.i(TAG, "onAudioType: content:" + content);
+                if (callback != null)
+                    callback.onAudioType(content); //"音频拼接（非混音）："
+            }
+
+            @Override
+            public void onProgress(int rate) {
+                Log.i(TAG, "onProgress: rate:" + rate);
+                if (callback != null) {
+                    audioProgress[0] = rate / 2;
+                    callback.onAudioRate(audioProgress[0] + audioProgress[1]);
+                }
             }
         });
     }
@@ -218,12 +254,28 @@ public class MediaBind {
                 pcmMixOkIndex[1] = true;
                 pcmMixPaths[1] = path;
                 Log.d(TAG, "onPcmPath: 1");
-
             }
 
             @Override
             public void onFinishWithoutMix() {
 
+            }
+        });
+        bgmComposer.setAudioProgressCallBack(new AudioComposer.AudioProgressCallBack() {
+            @Override
+            public void onAudioType(String content) {
+                Log.i(TAG, "onAudioType: content:" + content);
+                if (callback != null)
+                    callback.onAudioType(content); //"音频拼接（混音）："
+            }
+
+            @Override
+            public void onProgress(int rate) {
+                Log.i(TAG, "onProgress: rate:" + rate);
+                if (callback != null) {
+                    audioProgress[1] = rate / 2;
+                    callback.onAudioRate(audioProgress[0] + audioProgress[1]);
+                }
             }
         });
     }
@@ -238,8 +290,25 @@ public class MediaBind {
             @Override
             public void onh264Path() {
                 videoAudioOkIndex[1] = true;
-                if (callback != null)
+                if (callback != null) {
                     callback.callback("视频结束");
+                    callback.onVideoRate(100);
+                }
+
+            }
+        });
+        videoComposer.setVideoProgressCallBack(new VideoComposer.VideoProgressCallBack() {
+            @Override
+            public void onVideoType(String content) {
+                if (callback != null)
+                    callback.onVideoType(content); //"视频拼接"
+            }
+
+            @Override
+            public void onProgress(int rate) {
+                if (callback != null) {
+                    callback.onVideoRate(rate);
+                }
             }
         });
     }
@@ -263,13 +332,24 @@ public class MediaBind {
 
                             pcmMixPaths[0] = Constants.getPath("audio/", "audio" + "outPcm" + ".pcm");
                             pcmMixPaths[1] = Constants.getPath("audio/", "bgm" + "outPcm" + ".pcm");
-                            audioMix.open(pcmMixPaths, audioMixFilePath, audioComposer.getFormat(), 44100, 2, 8192);//audioComposer.getMinSampleRate(), audioComposer.getChannelCount(), audioComposer.getMaxInputSize());
+                            audioMix.open(pcmMixPaths, audioMixFilePath, audioComposer.getFormat(), 44100, 2, 8192, audioComposer.getDurationUs());//audioComposer.getMinSampleRate(), audioComposer.getChannelCount(), audioComposer.getMaxInputSize());
                             audioMix.start();
+                            audioMix.setAudioMixCallBack(new AudioMix.AudioMixCallBack() {
+                                @Override
+                                public void onProgress(int rate) {
+                                    if (callback != null) {
+                                        callback.onAudioRate((int) (AUDIOMIX_RESAMPLE_RATE + (float)(AUDIOMIX_MERGE_RATE + AUDIOMIX_MIX_RATE) / 100 * rate));
+                                    }
+                                }
+                            });
                             audioMix.setOnFinishListener(new AudioMix.FinishListener() {
                                 @Override
                                 public void onFinish() {
                                     videoAudioOkIndex[0] = true;
                                     Log.d(TAG, "audioMixHandler onFinish: ");
+                                    if (callback != null) {
+                                        callback.onAudioRate(100);
+                                    }
                                 }
                             });
                             Log.d(TAG, "audioMixHandler: break");
@@ -322,13 +402,15 @@ public class MediaBind {
                     audioOutFilePath = this.audioOutFilePath;
                 }
 
-                mediaCombine.open(videoOutFilePath, audioOutFilePath, finalOutFilePath, new MediaCombine.CombineVideoListener() {
+                mediaCombine.open(videoOutFilePath, audioOutFilePath, finalOutFilePath,videoComposer.getDurationUs(), new MediaCombine.CombineVideoListener() {
                     @Override
                     public void onProgress(int progress) {
-                        if (callback != null)
-                            callback.callback("都结束");
+                        if (callback != null) {
+                            callback.onCombineRate(progress);
+                        }
                     }
                 });
+
                 mediaCombine.start();
                 break;
             }
@@ -368,6 +450,16 @@ public class MediaBind {
     }
 
     public interface MediaBindCallback {
+        public void onVideoType(String content);
+
+        public void onAudioType(String content);
+
+        public void onVideoRate(int rate);
+
+        public void onAudioRate(int rate);
+
         public void callback(String content);
+
+        public void onCombineRate(int rate);
     }
 }
