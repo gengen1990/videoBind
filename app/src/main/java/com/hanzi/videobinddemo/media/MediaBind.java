@@ -22,9 +22,9 @@ import java.util.List;
 public class MediaBind {
     public static String TAG = "MediaBind";
 
-    public static int ONLY_VIDEO_PROCESS = 0;
-    public static int ONLY_AUDIO_PROCESS = 1;
-    public static int BOTH_PROCESS = 2;
+    public final static int ONLY_VIDEO_PROCESS = 0;
+    public final static int ONLY_AUDIO_PROCESS = 1;
+    public final static int BOTH_PROCESS = 2;
 
     private int processStragey = BOTH_PROCESS;
 
@@ -67,35 +67,75 @@ public class MediaBind {
         this.processStragey = processStragey;
     }
 
-    public void setCallback(MediaBindCallback callback){
-        this.callback=callback;
+    public void setCallback(MediaBindCallback callback) {
+        this.callback = callback;
     }
 
     public int open(MediaBindInfo bindInfo) {
         this.mediaBindInfo = bindInfo;
-        initAudioComposer(bindInfo);
-        initBgmComposer(bindInfo);
-        initMediaAudioMix();
+        switch (processStragey) {
+            case BOTH_PROCESS:
+                initAudioComposer(bindInfo);
+                initBgmComposer(bindInfo);
+                initMediaAudioMix();
 
-        initVideoComposer(bindInfo);
+                initVideoComposer(bindInfo);
 
-        initMediaCombine();
+                initMediaCombine();
+                break;
+            case ONLY_AUDIO_PROCESS:
+                initAudioComposer(bindInfo);
+                initBgmComposer(bindInfo);
+                initMediaAudioMix();
+                break;
+            case ONLY_VIDEO_PROCESS:
+                initVideoComposer(bindInfo);
+            default:
+                break;
+        }
+
         return 0;
     }
 
     public int start() {
-        startAudio();
-        startVideo();
-        startCombine();
+        switch (processStragey) {
+            case ONLY_AUDIO_PROCESS:
+                startAudio();
+                break;
+            case ONLY_VIDEO_PROCESS:
+                startVideo();
+                break;
+            case BOTH_PROCESS:
+                startAudio();
+                startVideo();
+                startCombine();
+                break;
+            default:
+                break;
+        }
         return 0;
     }
 
     public int stop() {
-        audioComposer.stop();
-        bgmComposer.stop();
-        audioMix.stop();
-        videoComposer.stop();
-        mediaCombine.stop();
+        switch (processStragey) {
+            case ONLY_AUDIO_PROCESS:
+                audioComposer.stop();
+                bgmComposer.stop();
+                audioMix.stop();
+                break;
+            case ONLY_VIDEO_PROCESS:
+                videoComposer.stop();
+                break;
+            case BOTH_PROCESS:
+                audioComposer.stop();
+                bgmComposer.stop();
+                audioMix.stop();
+                videoComposer.stop();
+                mediaCombine.stop();
+                break;
+            default:
+                break;
+        }
         return 0;
     }
 
@@ -120,6 +160,7 @@ public class MediaBind {
 
     /**
      * 初始化 音频源播放
+     *
      * @param bindInfo
      */
     private void initAudioComposer(MediaBindInfo bindInfo) {
@@ -132,10 +173,11 @@ public class MediaBind {
                 Log.d(TAG, "onPcmPath: 0");
 
             }
+
             @Override
             public void onFinishWithoutMix() {
                 videoAudioOkIndex[0] = true;
-                if (callback!=null)
+                if (callback != null)
                     callback.callback("音频结束");
             }
         });
@@ -143,6 +185,7 @@ public class MediaBind {
 
     /**
      * 初始化 背景源播放
+     *
      * @param info
      */
     private void initBgmComposer(MediaBindInfo info) {
@@ -154,9 +197,8 @@ public class MediaBind {
 
         //计算当个bgm 音频的长度
         AudioExtractor extractor = new AudioExtractor(bgm.getUrl(), bgm.getStartTimeUs(), bgm.getEndTimeUs());
-        long mBgmDuration =extractor.getTotalDurationUs();
+        long mBgmDuration = extractor.getTotalDurationUs();
         extractor.release();
-
 
 
         bgm.setDurationUs(mBgmDuration);
@@ -196,8 +238,8 @@ public class MediaBind {
             @Override
             public void onh264Path() {
                 videoAudioOkIndex[1] = true;
-                if (callback!=null)
-                callback.callback("视频结束");
+                if (callback != null)
+                    callback.callback("视频结束");
             }
         });
     }
@@ -219,9 +261,9 @@ public class MediaBind {
                     while (true) {
                         if (pcmMixOkIndex[0] && pcmMixOkIndex[1]) {
 
-                    pcmMixPaths[0]= Constants.getPath("audio/", "audio" + "outPcm" + ".pcm");
-                    pcmMixPaths[1]= Constants.getPath("audio/", "bgm" + "outPcm" + ".pcm");
-                            audioMix.open(pcmMixPaths, audioMixFilePath, audioComposer.getFormat(), 44100,2,8192);//audioComposer.getMinSampleRate(), audioComposer.getChannelCount(), audioComposer.getMaxInputSize());
+                            pcmMixPaths[0] = Constants.getPath("audio/", "audio" + "outPcm" + ".pcm");
+                            pcmMixPaths[1] = Constants.getPath("audio/", "bgm" + "outPcm" + ".pcm");
+                            audioMix.open(pcmMixPaths, audioMixFilePath, audioComposer.getFormat(), 44100, 2, 8192);//audioComposer.getMinSampleRate(), audioComposer.getChannelCount(), audioComposer.getMaxInputSize());
                             audioMix.start();
                             audioMix.setOnFinishListener(new AudioMix.FinishListener() {
                                 @Override
@@ -260,18 +302,24 @@ public class MediaBind {
         return audioSampleRate;
     }
 
+    /**
+     * 开始对视频进行处理
+     */
     private void startVideo() {
         videoComposer.start();
     }
 
+    /**
+     * 开始音视频合成
+     */
     private void startCombine() {
         while (true) {
             if (videoAudioOkIndex[0] && videoAudioOkIndex[1]) {
-                String audioOutFilePath ;
+                String audioOutFilePath;
                 if (isAudioMix) {
-                    audioOutFilePath=this.audioMixFilePath;
-                }else {
-                    audioOutFilePath=this.audioOutFilePath;
+                    audioOutFilePath = this.audioMixFilePath;
+                } else {
+                    audioOutFilePath = this.audioOutFilePath;
                 }
 
                 mediaCombine.open(videoOutFilePath, audioOutFilePath, finalOutFilePath, new MediaCombine.CombineVideoListener() {
@@ -289,7 +337,8 @@ public class MediaBind {
     }
 
     /**
-     * 设置BGM 的数量
+     * 设置BGM 的数量，同步视频源长度
+     *
      * @param mDuration
      * @param bgmBean
      * @param mediaBeans
@@ -299,14 +348,14 @@ public class MediaBind {
         try {
 
             int count = (int) (mDuration / bgmBean.getDurationUs());
-            Log.i(TAG, "setBgmMediaBeansCount: mDuration:"+mDuration);
-            Log.i(TAG, "setBgmMediaBeansCount: bgmBean.getTotalDurationUs:"+bgmBean.getDurationUs());
-            Log.i(TAG, "setBgmMediaBeansCount: count:"+count);
+            Log.i(TAG, "setBgmMediaBeansCount: mDuration:" + mDuration);
+            Log.i(TAG, "setBgmMediaBeansCount: bgmBean.getTotalDurationUs:" + bgmBean.getDurationUs());
+            Log.i(TAG, "setBgmMediaBeansCount: count:" + count);
             for (int i = 0; i < count; i++) {
                 mediaBeans.add(bgmBean.clone());
             }
 
-            endTime =  mDuration % bgmBean.getDurationUs();
+            endTime = mDuration % bgmBean.getDurationUs();
             if (endTime != 0) {
                 MediaBean mediaBean = bgmBean.clone();
                 mediaBean.setTime(bgmBean.getDurationUs(), 0, endTime);
@@ -317,7 +366,8 @@ public class MediaBind {
             e.printStackTrace();
         }
     }
-    public interface MediaBindCallback{
+
+    public interface MediaBindCallback {
         public void callback(String content);
     }
 }

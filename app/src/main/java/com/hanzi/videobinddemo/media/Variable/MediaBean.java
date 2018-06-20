@@ -137,9 +137,9 @@ public class MediaBean implements Cloneable {
             return "EffectInfo{" +
                     ", bitmaps=" + bitmaps +
 //                    ", path_id=" + path_id +
-                    ", effectStartTime=" + effectStartTime +
-                    ", effectEndTime=" + effectEndTime +
-                    ", interval=" + interval +
+                    ", effectStartTimeMs=" + effectStartTimeMs +
+                    ", effectEndTimeMs=" + effectEndTimeMs +
+                    ", intervalMs=" + intervalMs +
                     ", angle=" + angle +
                     ", x=" + x +
                     ", y=" + y +
@@ -147,7 +147,7 @@ public class MediaBean implements Cloneable {
                     ", h=" + h +
                     ", effectPos=" + effectPos +
                     ", videoLastTime=" + videoLastTime +
-                    ", videoFrameList=" + videoFrameList +
+                    ", videoFrameTimeList=" + videoFrameTimeList +
                     '}';
         }
 
@@ -155,11 +155,11 @@ public class MediaBean implements Cloneable {
 
         public List<Bitmap> bitmaps = new ArrayList<>();
 
-        public long effectStartTime;  //effect 的开始时间 毫秒
+        public long effectStartTimeMs;  //effect 的开始时间 毫秒
 
-        public long effectEndTime;    //Effect 的结束时间 毫秒
+        public long effectEndTimeMs;    //Effect 的结束时间 毫秒
 
-        public int interval;    //动画变化时间 毫秒
+        public int intervalMs;    //动画变化时间 毫秒
 
         public float angle;       //旋转的角度 顺时针
 
@@ -182,6 +182,6 @@ public class MediaBean implements Cloneable {
 
         public int videoLastTime = 0;   //记录上一张时间
 
-        public List<Integer> videoFrameList = new ArrayList<>();  //视频 第几帧需要加Effect特效
+        public List<Integer> videoFrameTimeList = new ArrayList<>();  //视频 时间需要加Effect特效
     }
 }

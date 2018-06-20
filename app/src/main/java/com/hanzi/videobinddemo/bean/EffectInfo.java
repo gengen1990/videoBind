@@ -68,9 +68,9 @@ public class EffectInfo implements Parcelable {
                     "paths=" + paths +
                     ", bitmaps=" + bitmaps +
 //                    ", path_id=" + path_id +
-                    ", effectStartTime=" + effectStartTime +
-                    ", effectEndTime=" + effectEndTime +
-                    ", interval=" + interval +
+                    ", effectStartTimeMs=" + effectStartTime +
+                    ", effectEndTimeMs=" + effectEndTime +
+                    ", intervalMs=" + interval +
                     ", angle=" + angle +
                     ", x=" + x +
                     ", y=" + y +
@@ -78,7 +78,7 @@ public class EffectInfo implements Parcelable {
                     ", h=" + h +
                     ", effectPos=" + effectPos +
                     ", videoLastTime=" + videoLastTime +
-                    ", videoFrameList=" + videoFrameList +
+                    ", videoFrameTimeList=" + videoFrameList +
                     '}';
         }
 

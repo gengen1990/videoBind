@@ -245,13 +245,13 @@ public class VideoDrawer implements GLSurfaceView.Renderer {
                     Log.i(TAG, "bindImage: size:"+effectInfos.size());
                     MediaBean.EffectInfo effectInfo = effectInfos.get(i);
                     if (effectInfo.mf == 0) {
-                        effectInfo.mf = (info.getRate() == 0 ? 15 : info.getRate()) * effectInfo.interval / 1000;
+                        effectInfo.mf = (info.getRate() == 0 ? 15 : info.getRate()) * effectInfo.intervalMs / 1000;
                     }
-                    if (effectInfo.videoFrameList.size() > 0
-                            && framePosition >= effectInfo.videoFrameList.get(0)
-                            && framePosition <= effectInfo.videoFrameList.get(effectInfo.videoFrameList.size() - 1)) {
-//                        Log.i(TAG, "bindImage: effectInfo.videoFrameList.get(0):"+effectInfo.videoFrameList.get(0));
-//                        Log.i(TAG, "bindImage: effectInfo.videoFrameList.get(effectInfo.videoFrameList.size() - 1):"+effectInfo.videoFrameList.get(effectInfo.videoFrameList.size() - 1));
+                    if (effectInfo.videoFrameTimeList.size() > 0
+                            && framePosition >= (effectInfo.videoFrameTimeList.get(0)* info.getRate())
+                            && framePosition <= effectInfo.videoFrameTimeList.get(effectInfo.videoFrameTimeList.size() - 1)* info.getRate()) {
+//                        Log.i(TAG, "bindImage: effectInfo.videoFrameTimeList.get(0):"+effectInfo.videoFrameTimeList.get(0));
+//                        Log.i(TAG, "bindImage: effectInfo.videoFrameTimeList.get(effectInfo.videoFrameTimeList.size() - 1):"+effectInfo.videoFrameTimeList.get(effectInfo.videoFrameTimeList.size() - 1));
                        if (effectInfo.mfCount >= effectInfo.mf) {
 
                             if (effectInfo.effectPos == effectInfo.bitmaps.size() - 1) {

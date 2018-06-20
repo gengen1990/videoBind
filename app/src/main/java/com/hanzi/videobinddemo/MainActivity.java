@@ -93,10 +93,10 @@ public class MainActivity extends AppCompatActivity {
 
                 MediaBean mediaBean1 = new MediaBean(finalinputFilePath1, 0);
                 mediaBean1.setTime(1000000,9000000);
-//                List<MediaBean.EffectInfo> effectInfos =new ArrayList<>();
-//                MediaBean.EffectInfo effectInfo=addEffectInfoData(drawingModel);
-//                effectInfos.add(effectInfo);
-//                mediaBean1.setEffectInfos(effectInfos);
+                List<MediaBean.EffectInfo> effectInfos =new ArrayList<>();
+                MediaBean.EffectInfo effectInfo=addEffectInfoData(drawingModel);
+                effectInfos.add(effectInfo);
+                mediaBean1.setEffectInfos(effectInfos);
 
                 MediaBean mediaBean2 =new MediaBean(finalinputFilePath2, 0);
 
@@ -139,11 +139,11 @@ public class MainActivity extends AppCompatActivity {
     private MediaBean.EffectInfo addEffectInfoData(DrawingModel drawingModel) {
         MediaBean.EffectInfo bean = new MediaBean.EffectInfo();
         if (drawingModel != null) {
-            bean.effectStartTime = drawingModel.getInitialTimeUs() / 1000;
-            bean.effectEndTime = drawingModel.getInitialTimeUs() / 1000 + drawingModel.getDurationUs() / 1000;
+            bean.effectStartTimeMs = drawingModel.getInitialTimeUs() / 1000;
+            bean.effectEndTimeMs = drawingModel.getInitialTimeUs() / 1000 + drawingModel.getDurationUs() / 1000;
             bean.bitmaps.addAll(Arrays.asList(drawingModel.getBitmaps()).subList(0, drawingModel.getBitmapCount()));
             Log.i(TAG, "addEffectInfoData: drawingModel.getBitmapCount():"+drawingModel.getBitmapCount());
-            bean.interval = (int) (drawingModel.getFrameTimeUs() / 1000);
+            bean.intervalMs = (int) (drawingModel.getFrameTimeUs() / 1000);
             bean.id = drawingModel.getDrawingModelId();
 //            bean.x = drawingModel.getLeftTopX();
 //            bean.y = drawingModel.getLeftTopY();
@@ -181,20 +181,20 @@ public class MainActivity extends AppCompatActivity {
             bean.h = (int) (bean.h / scale);
 
             bean.scale = drawingModel.getScale();
-            int frame1 = (int) (15 * (bean.effectStartTime / 1000));
-            int frame2 = (int) (15 * (bean.effectEndTime / 1000))*10;
-//            if (bean.effectStartTime == 0) {
-//                frame2 = (int) (bean.effectEndTime);
+            int frameTime1 = (int)  (bean.effectStartTimeMs / 1000);
+            int frameTime2 = (int)  (bean.effectEndTimeMs / 1000);
+//            if (bean.effectStartTimeMs == 0) {
+//                frame2 = (int) (bean.effectEndTimeMs);
 //            } else {
-//                frame2 = (int) (frame1 * bean.effectEndTime / );// (int)(bean.effectEndTime* mVideoView.getFrameRate(0));
+//                frame2 = (int) (frame1 * bean.effectEndTimeMs / );// (int)(bean.effectEndTimeMs* mVideoView.getFrameRate(0));
 //            }
-            bean.videoFrameList.add(frame1);
-            bean.videoFrameList.add(frame2);
+            bean.videoFrameTimeList.add(frameTime1);
+            bean.videoFrameTimeList.add(frameTime2);
             Log.d(TAG, "addEffectInfoData: angle:" + bean.angle
                     + ",x:" + bean.x + ",y:" + bean.y
                     + ",w:" + bean.w + ",h:" + bean.h
-                    + ",frame1:" + frame1
-                    + ",frame2:" + frame2
+                    + ",frameTime1:" + frameTime1
+                    + ",frameTime2:" + frameTime2
                     + ",scale:" + bean.scale);
         }
         return bean;
