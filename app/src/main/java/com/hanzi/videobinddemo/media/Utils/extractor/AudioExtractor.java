@@ -28,42 +28,45 @@ public class AudioExtractor extends MediaExtractor {
     @Override
     public void setInfo() {
         if (isExistedTrackType(AUDIO_TYPE)) {
+            Log.i(TAG, "setInfo: format:" + format.toString());
             sampleRate = Integer.parseInt(MuxerUtils.getValue(format.toString(), "sample-rate"));
             channelCount = Integer.parseInt(MuxerUtils.getValue(format.toString(), "channel-count"));
-            totalDurationUs = Long.parseLong(MuxerUtils.getValue(format.toString(),"durationUs"));
-            maxInputSize = Integer.parseInt(MuxerUtils.getValue(format.toString(),"max-input-size"));
+            totalDurationUs = Long.parseLong(MuxerUtils.getValue(format.toString(), "durationUs"));
+            String inputSize = MuxerUtils.getValue(format.toString(), "max-input-size");
+            if (inputSize != "")
+                maxInputSize = Integer.parseInt(inputSize);
             Log.d(TAG, String.format("audioExtractor setInfo:  sampleRate %d, channelCount %d totalDurationUs %d, maxInputSize %d",
                     sampleRate, channelCount, totalDurationUs, maxInputSize));
-           if (startTimeUs>=0 && endTimeUs>startTimeUs && totalDurationUs>=endTimeUs) {
-               cutDurationUs = endTimeUs-startTimeUs;
-           }
-            Log.i(TAG, "setInfo: cutDuration:"+cutDurationUs);
+            if (startTimeUs >= 0 && endTimeUs > startTimeUs && totalDurationUs >= endTimeUs) {
+                cutDurationUs = endTimeUs - startTimeUs;
+            }
+            Log.i(TAG, "setInfo: cutDuration:" + cutDurationUs);
         }
     }
 
-    public int getInitSampleRate(){
+    public int getInitSampleRate() {
         return sampleRate;
     }
 
 
     public boolean isNeedToResample(int sampleRate) {
-//        this.outSampleRate = sampleRate;
-//        Log.d(TAG, String.format("isNeedToResample sampleRate:%d, outSampleRate:%d",this.sampleRate,outSampleRate));
-//        if (this.sampleRate!=outSampleRate) {
-            return true;
-//        }else {
-//            return false;
-//        }
+        this.outSampleRate = sampleRate;
+        Log.d(TAG, String.format("isNeedToResample sampleRate:%d, outSampleRate:%d",this.sampleRate,outSampleRate));
+        if (this.sampleRate!=outSampleRate) {
+        return true;
+        }else {
+            return false;
+        }
     }
 
     public long getTotalDurationUs() {
         return totalDurationUs;
     }
 
-    public long getCutDurationUs(){
+    public long getCutDurationUs() {
 
-        if (cutDurationUs==0){
-            cutDurationUs=totalDurationUs;
+        if (cutDurationUs == 0) {
+            cutDurationUs = totalDurationUs;
         }
         return cutDurationUs;
     }

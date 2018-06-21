@@ -10,7 +10,6 @@ import android.widget.TextView;
 
 import com.hanzi.videobinddemo.core.MyApplication;
 import com.hanzi.videobinddemo.filter.AFilter;
-import com.hanzi.videobinddemo.filter.NoFilter;
 import com.hanzi.videobinddemo.media.MediaBind;
 import com.hanzi.videobinddemo.media.Variable.MediaBean;
 import com.hanzi.videobinddemo.media.Variable.MediaBindInfo;
@@ -32,8 +31,8 @@ public class MainActivity extends AppCompatActivity {
 
     private MediaBind mediaBind;
     private static String PATH = Environment.getExternalStorageDirectory().getAbsolutePath();
-    private String finalinputFilePath1 = PATH + "/1/water11.mp4";
-    private String finalinputFilePath2 = PATH + "/1/water12.mp4";
+    private String finalinputFilePath1 = PATH + "/1/ice.mp4";
+    private String finalinputFilePath2 = PATH + "/1/ice.mp4";
     private String bgmPath = PATH + "/1/Christmas_Story.aac";
 
     private int objectEditWidth = 400, objectEditHeight = 200;
@@ -66,7 +65,12 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 startCompose();
-                merge.setText("开始");
+                MainActivity.this.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        merge.setText("开始");
+                    }
+                });
             }
         });
         stop.setOnClickListener(new View.OnClickListener() {
@@ -74,6 +78,13 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 mediaBind.stop();
                 mediaBind.destory();
+                MainActivity.this.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        merge.setText("合并");
+                    }
+                });
+
             }
         });
 
@@ -155,7 +166,7 @@ public class MainActivity extends AppCompatActivity {
 
 
                 MediaBean mediaBean1 = new MediaBean(finalinputFilePath1, 0);
-//                mediaBean1.setTime(1000000,19000000);
+                mediaBean1.setTimeUs(2000000,9000000);
                 List<MediaBean.EffectInfo> effectInfos =new ArrayList<>();
                 MediaBean.EffectInfo effectInfo=addEffectInfoData(drawingModel);
                 effectInfos.add(effectInfo);
@@ -167,7 +178,9 @@ public class MainActivity extends AppCompatActivity {
                 mediaBeans.add(mediaBean2);
                 AFilter beatlesFilter= FilterLibrary.getInstance().getFilter("Beatles");
                 mediaBindInfo.setFilter(beatlesFilter);
-                mediaBindInfo.setFilter(new NoFilter(MainActivity.this.getResources()));
+//                mediaBindInfo.setFilter(new NoFilter(MainActivity.this.getResources()));
+
+                mediaBindInfo.setMute(true);
 
                 mediaBindInfo.setMediaBeans(mediaBeans);
 

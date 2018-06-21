@@ -94,7 +94,7 @@ public class MediaBind {
             case BOTH_PROCESS:
                 initAudioComposer(bindInfo);
                 initBgmComposer(bindInfo);
-                initMediaAudioMix();
+                initMediaAudioMix(bindInfo);
 
                 initVideoComposer(bindInfo);
 
@@ -103,7 +103,7 @@ public class MediaBind {
             case ONLY_AUDIO_PROCESS:
                 initAudioComposer(bindInfo);
                 initBgmComposer(bindInfo);
-                initMediaAudioMix();
+                initMediaAudioMix(bindInfo);
                 break;
             case ONLY_VIDEO_PROCESS:
                 initVideoComposer(bindInfo);
@@ -167,7 +167,8 @@ public class MediaBind {
     /**
      * 初始化 音频合成
      */
-    private void initMediaAudioMix() {
+    private void initMediaAudioMix(MediaBindInfo bindInfo) {
+        if (bindInfo.getBgm() == null && bindInfo.isMute()) return;
         audioMixHandlerThread = new HandlerThread("audioMix");
         audioMixHandlerThread.start();
         audioMixHandler = new Handler(audioMixHandlerThread.getLooper());
@@ -258,7 +259,11 @@ public class MediaBind {
 
             @Override
             public void onFinishWithoutMix() {
-
+                videoAudioOkIndex[0] = true;
+                if (callback != null) {
+                    callback.callback("bgm结束");
+                    callback.onAudioRate(100);
+                }
             }
         });
         bgmComposer.setAudioProgressCallBack(new AudioComposer.AudioProgressCallBack() {
@@ -320,10 +325,9 @@ public class MediaBind {
         //获取音频中最小的采样率
         int outSampleRate = getAudioMinSampleRate();
 
-        if (bgmComposer != null) {
+        if (bgmComposer != null && !mediaBindInfo.isMute()) {
             audioComposer.start(outSampleRate, 2, true);
             bgmComposer.start(outSampleRate, 2, true);
-
             audioMixHandler.post(new Runnable() {
                 @Override
                 public void run() {
@@ -338,7 +342,7 @@ public class MediaBind {
                                 @Override
                                 public void onProgress(int rate) {
                                     if (callback != null) {
-                                        callback.onAudioRate((int) (AUDIOMIX_RESAMPLE_RATE + (float)(AUDIOMIX_MERGE_RATE + AUDIOMIX_MIX_RATE) / 100 * rate));
+                                        callback.onAudioRate((int) (AUDIOMIX_RESAMPLE_RATE + (float) (AUDIOMIX_MERGE_RATE + AUDIOMIX_MIX_RATE) / 100 * rate));
                                     }
                                 }
                             });
@@ -358,11 +362,11 @@ public class MediaBind {
                     }
                 }
             });
-        } else {
+        } else if (bgmComposer != null) {
+            bgmComposer.start(outSampleRate, 2, false);
+        } else if (!mediaBindInfo.isMute()) {
             audioComposer.start(outSampleRate, 2, false);
         }
-
-
     }
 
     /**
@@ -373,8 +377,12 @@ public class MediaBind {
     private int getAudioMinSampleRate() {
         int audioSampleRate = 44100;
         if (bgmComposer != null) {
-            audioSampleRate = audioComposer.getMinSampleRate() > bgmComposer.getMinSampleRate() ?
-                    bgmComposer.getMinSampleRate() : audioComposer.getMinSampleRate();
+            if (mediaBindInfo.isMute()) {
+                audioSampleRate = bgmComposer.getMinSampleRate();
+            } else {
+                audioSampleRate = audioComposer.getMinSampleRate() > bgmComposer.getMinSampleRate() ?
+                        bgmComposer.getMinSampleRate() : audioComposer.getMinSampleRate();
+            }
         } else {
             audioSampleRate = audioComposer.getMinSampleRate();
         }
@@ -395,14 +403,16 @@ public class MediaBind {
     private void startCombine() {
         while (true) {
             if (videoAudioOkIndex[0] && videoAudioOkIndex[1]) {
-                String audioOutFilePath;
+                String audioOutFilePath= this.audioOutFilePath;
                 if (isAudioMix) {
                     audioOutFilePath = this.audioMixFilePath;
-                } else {
+                } else if (!mediaBindInfo.isMute()){
                     audioOutFilePath = this.audioOutFilePath;
+                } else if (mediaBindInfo.getBgm()!=null){
+                    audioOutFilePath=this.bgmOutFilePath;
                 }
 
-                mediaCombine.open(videoOutFilePath, audioOutFilePath, finalOutFilePath,videoComposer.getDurationUs(), new MediaCombine.CombineVideoListener() {
+                mediaCombine.open(videoOutFilePath, audioOutFilePath, finalOutFilePath, videoComposer.getDurationUs(), new MediaCombine.CombineVideoListener() {
                     @Override
                     public void onProgress(int progress) {
                         if (callback != null) {
@@ -440,7 +450,7 @@ public class MediaBind {
             endTime = mDuration % bgmBean.getDurationUs();
             if (endTime != 0) {
                 MediaBean mediaBean = bgmBean.clone();
-                mediaBean.setTime(bgmBean.getDurationUs(), 0, endTime);
+                mediaBean.setTimeUs(bgmBean.getDurationUs(), 0, endTime);
                 mediaBeans.add(mediaBean);
             }
 

@@ -19,6 +19,8 @@ public class MediaBindInfo {
     private int mOutputWidth;
     private int mOutputHeight;
 
+    private boolean isMute=false;
+
     public int getOutputWidth() {
         return mOutputWidth;
     }
@@ -73,5 +75,13 @@ public class MediaBindInfo {
 
     public void setFilter(AFilter filter) {
         this.filter = filter;
+    }
+
+    public boolean isMute() {
+        return isMute;
+    }
+
+    public void setMute(boolean mute) {
+        isMute = mute;
     }
 }

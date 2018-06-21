@@ -154,9 +154,9 @@ public class AudioComposer {
 
         if (audioProgressCallBack != null) {
             if (isMix) {
-                audioProgressCallBack.onAudioType("音频拼接（添加背景音乐）");
+                audioProgressCallBack.onAudioType("音频拼接（混音）");
             } else {
-                audioProgressCallBack.onAudioType("音频拼接（不添加背景音乐）");
+                audioProgressCallBack.onAudioType("音频拼接（不混音）");
             }
         }
 

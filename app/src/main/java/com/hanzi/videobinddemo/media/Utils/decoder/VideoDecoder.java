@@ -193,7 +193,7 @@ public class VideoDecoder {
             } else if (idx == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                 Log.i(TAG, "decode output format changed:" + decoder.getOutputFormat().toString());
             } else if (idx >= 0) {
-                boolean doRender = (outputInfo.size != 0 && outputInfo.presentationTimeUs - mFirstSampleTime > mStartTimeUs);
+                boolean doRender = (outputInfo.size != 0 && outputInfo.presentationTimeUs  > 0);//- mFirstSampleTime mStartTimeUs
                 decoder.releaseOutputBuffer(idx, doRender);
                 Log.d(TAG, "run: doRender:" + doRender);
                 if (doRender) {

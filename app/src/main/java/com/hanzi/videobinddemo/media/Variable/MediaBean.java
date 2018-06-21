@@ -35,11 +35,11 @@ public class MediaBean implements Cloneable {
         this.type = type;
     }
 
-    public void setTime(long startTimeUs, long endTimeUs) {
-      setTime(-1,startTimeUs,endTimeUs);
+    public void setTimeUs(long startTimeUs, long endTimeUs) {
+      setTimeUs(-1,startTimeUs,endTimeUs);
     }
 
-    public void setTime(long duration, long startTime, long endTime) {
+    public void setTimeUs(long duration, long startTime, long endTime) {
         this.durationUs = duration;
         this.startTimeUs = startTime;
         this.endTimeUs = endTime;
