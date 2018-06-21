@@ -31,9 +31,9 @@ public class MainActivity extends AppCompatActivity {
 
     private MediaBind mediaBind;
     private static String PATH = Environment.getExternalStorageDirectory().getAbsolutePath();
-    private String finalinputFilePath1 = PATH + "/1/ice.mp4";
-    private String finalinputFilePath2 = PATH + "/1/ice.mp4";
-    private String bgmPath = PATH + "/1/Christmas_Story.aac";
+    private String finalinputFilePath1 = PATH + "/1/water11.mp4";
+    private String finalinputFilePath2 = PATH + "/1/water12.mp4";
+    private String bgmPath = PATH + "/1/Christmas_Story.aac";//Christmas_Story.aac
 
     private int objectEditWidth = 400, objectEditHeight = 200;
 
@@ -76,8 +76,11 @@ public class MainActivity extends AppCompatActivity {
         stop.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mediaBind.stop();
-                mediaBind.destory();
+                if (mediaBind!=null) {
+                    mediaBind.stop();
+//                    mediaBind.destory();
+//                    mediaBind = null;
+                }
                 MainActivity.this.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -92,7 +95,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startCompose() {
-        new Thread(new Runnable() {
+        new Thread( new Runnable() {
             @Override
             public void run() {
                 mediaBind = new MediaBind(MediaBind.BOTH_PROCESS);
@@ -180,7 +183,7 @@ public class MainActivity extends AppCompatActivity {
                 mediaBindInfo.setFilter(beatlesFilter);
 //                mediaBindInfo.setFilter(new NoFilter(MainActivity.this.getResources()));
 
-                mediaBindInfo.setMute(true);
+//                mediaBindInfo.setMute(false);
 
                 mediaBindInfo.setMediaBeans(mediaBeans);
 

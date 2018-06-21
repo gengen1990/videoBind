@@ -149,6 +149,7 @@ public class VideoDecoder {
     }
 
     public int stop() {
+        Log.i(TAG, "stop: outputSurface");
         if (outputSurface != null) {
             outputSurface.release();
         }
@@ -181,7 +182,7 @@ public class VideoDecoder {
     public boolean decodeOutput() {
         int idx;
         try {
-            Log.i(TAG, "decodeOutput: before");
+//            Log.i(TAG, "decodeOutput: before");
             idx = decoder.dequeueOutputBuffer(outputInfo, TIMEOUT_USEC);
             Log.i(TAG, "run: dequeueOutputBuffer idx:" + idx);
             if (idx == MediaCodec.INFO_TRY_AGAIN_LATER) {
@@ -193,6 +194,15 @@ public class VideoDecoder {
             } else if (idx == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                 Log.i(TAG, "decode output format changed:" + decoder.getOutputFormat().toString());
             } else if (idx >= 0) {
+                if ((outputInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
+                    //callback over
+
+//                    mRunning = false;
+
+                    if (videoDecodeCallBack != null)
+                        videoDecodeCallBack.decodeOver();
+                    return false;
+                }
                 boolean doRender = (outputInfo.size != 0 && outputInfo.presentationTimeUs  > 0);//- mFirstSampleTime mStartTimeUs
                 decoder.releaseOutputBuffer(idx, doRender);
                 Log.d(TAG, "run: doRender:" + doRender);
@@ -207,15 +217,7 @@ public class VideoDecoder {
                         videoDecodeCallBack.onOutputBufferInfo(outputInfo);
 //                    outputSurface.swapBuffers();
                 }
-                if ((outputInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-                    //callback over
 
-//                    mRunning = false;
-
-                    if (videoDecodeCallBack != null)
-                        videoDecodeCallBack.decodeOver();
-                    return false;
-                }
 
                 return true;
             }

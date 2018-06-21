@@ -56,6 +56,7 @@ public class AudioDecoder {
     public int stop() {
 //        stopThread();
         if (decoder!=null) {
+            Log.i(TAG, "stop: test");
             decoder.stop();
             decoder.release();
             decoder = null;

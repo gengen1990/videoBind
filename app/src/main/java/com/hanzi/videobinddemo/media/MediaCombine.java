@@ -137,7 +137,7 @@ public class MediaCombine {
                 bufferInfo.size = readVideoSampleSize;
                 bufferInfo.presentationTimeUs = extractor.getSampleTime();
                 bufferInfo.offset = 0;
-                bufferInfo.flags = extractor.getSampleFlags();
+                bufferInfo.flags = android.media.MediaExtractor.SAMPLE_FLAG_SYNC;//extractor.getSampleFlags();
                 mediaFileMuxer.writeSampleData(trackIndex, byteBuffer, bufferInfo);
 
                 if (index==1) {

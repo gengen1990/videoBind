@@ -52,8 +52,8 @@ public class AudioComposer {
     private int mOutAudioTrackIndex = -1;
     private long ptsOffset = 0L;
 
-    private HandlerThread mergeThread;
-    private Handler mergeHandler;
+    private HandlerThread composerThread;
+    private Handler composerHandler;
 
     private boolean isMix = false;
 
@@ -135,9 +135,9 @@ public class AudioComposer {
 
         Log.d(TAG, String.format("AudioComposer isBgm:%b, mDuration:%d,outMaxInputSize:%d", isBgm, mDuration, outMaxInputSize));
 
-        mergeThread = new HandlerThread("mergeWithoutResample");
-        mergeThread.start();
-        mergeHandler = new Handler(mergeThread.getLooper());
+        composerThread = new HandlerThread("audioComposer");
+        composerThread.start();
+        composerHandler = new Handler(composerThread.getLooper());
 
         if (isBgm) {
             suffix = "bgm";
@@ -163,7 +163,7 @@ public class AudioComposer {
         Log.d(TAG, "start: outSampleRate:" + this.outSampleRate);
         Log.d(TAG, "start: channelCount:" + channelCount);
         startMuxer();
-        mergeHandler.post(new Runnable() {
+        composerHandler.post(new Runnable() {
             @Override
             public void run() {
                 //进行重采样
@@ -174,6 +174,9 @@ public class AudioComposer {
                     //开始合并
                     startMerge();
                 } else {
+                    if (beStop) {
+                        return;
+                    }
                     //如果是混音，将pcm 合并到一个文件，传出
                     if (pcmPathHashMap != null) {
                         ArrayList<String> pcmPaths = new ArrayList<>();
@@ -189,11 +192,28 @@ public class AudioComposer {
         });
     }
 
-    public void stop() {
+    public void stop(boolean beStopThread) {
+        Log.i(TAG, "stop: ");
         beStop = true;
         isResampleStopOk();
+        if (beStopThread) {
+            stopMergeThread();
+        }
         stopMuxer();
         stopExtractor();
+    }
+
+    private void stopMergeThread() {
+        if (composerThread != null) {
+            composerThread.quitSafely();
+            try {
+                composerThread.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            composerThread = null;
+        }
+        composerThread = null;
     }
 
     /**
@@ -239,6 +259,7 @@ public class AudioComposer {
                 isResampleOk = true;
             }
         }
+        Log.i(TAG, "isResampleOk: break");
     }
 
     /**
@@ -268,7 +289,7 @@ public class AudioComposer {
 
             index++;
         }
-        stop();
+        stop(false);
         if (audioComposerCallBack != null)
             audioComposerCallBack.onFinishWithoutMix();
     }
@@ -287,7 +308,7 @@ public class AudioComposer {
 
         mReadBuf.rewind();
         boolean isRunning = true;
-        while (isRunning) {
+        while (isRunning && !beStop) {
             int chunkSize = audioExtractor.readSampleData(mReadBuf, 0);//读取帧数据
             long now = audioExtractor.getSampleTime() - firstSampleTime - startTimeUs;
 
@@ -309,10 +330,11 @@ public class AudioComposer {
 
                 Log.i(TAG, String.format("write sample track %d, size %d, pts %d flag %d offset %offset",
                         mOutAudioTrackIndex, info.size, info.presentationTimeUs, info.flags, info.offset));
-                if (info.size > 0 && info.presentationTimeUs > 0) {
+                if (info.size > 0 && info.presentationTimeUs > 0 && !beStop) {
                     mediaFileMuxer.writeSampleData(mOutAudioTrackIndex, mReadBuf, info);//写入文件
                     noMixMergeProgress(info);
                 }
+                if (!beStop)
                 audioExtractor.advance();
             }
         }
@@ -332,7 +354,7 @@ public class AudioComposer {
         }
 
         long audioPts = 0;
-        while (!byteContainer.isEmpty()) {
+        while (!byteContainer.isEmpty() && !beStop) {
             byte[] data = byteContainer.getData();
             ByteBuffer byteBuffer = ByteBuffer.allocate(data.length);
             MediaCodec.BufferInfo bufferInfo = byteContainer.getBufferInfo();
@@ -341,6 +363,7 @@ public class AudioComposer {
             byteBuffer.put(data);
             byteBuffer.flip();
             bufferInfo.presentationTimeUs = ptsOffset + bufferInfo.presentationTimeUs;
+            if (!beStop)
             mediaFileMuxer.writeSampleData(mOutAudioTrackIndex, byteBuffer, bufferInfo);
             noMixMergeProgress(bufferInfo);
         }
@@ -672,6 +695,11 @@ public class AudioComposer {
                 resampleIndex.put(index, true);
                 audioEncoder.stop();
                 encoderOverIndex.put(index, true);
+            }
+
+            @Override
+            public void setFormat(MediaFormat newFormat) {
+
             }
         });
         encoderOverIndex.put(index, false);

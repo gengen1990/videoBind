@@ -1,7 +1,6 @@
 package com.hanzi.videobinddemo.media.Utils.extractor;
 
 import android.media.MediaFormat;
-import android.util.Log;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -31,7 +30,6 @@ public class MediaExtractor {
             mMediaExtractor = new android.media.MediaExtractor();
             mMediaExtractor.setDataSource(url);
 //            isExistedTrackType(type);
-            Log.d(TAG, "MediaExtractor: outTrackIndex:"+trackIndex);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -59,7 +57,6 @@ public class MediaExtractor {
             MediaFormat format = mMediaExtractor.getTrackFormat(i);
             if (format.getString(MediaFormat.KEY_MIME).startsWith(mediaType)) {
                 trackIndex = i;
-                Log.i(TAG, "isExistedTrackType: trackIndex:"+trackIndex);
                 this.format = format;
                 this.type = type;
                 return true;

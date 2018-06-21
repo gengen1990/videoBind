@@ -136,19 +136,29 @@ public class MediaBind {
     public int stop() {
         switch (processStragey) {
             case ONLY_AUDIO_PROCESS:
-                audioComposer.stop();
-                bgmComposer.stop();
-                audioMix.stop();
+                if (audioComposer != null)
+                    audioComposer.stop(true);
+                if (bgmComposer != null)
+                    bgmComposer.stop(true);
+                if (audioMix != null)
+                    audioMix.stop();
                 break;
             case ONLY_VIDEO_PROCESS:
-                videoComposer.stop();
+                Log.i(TAG, "stop: videoComposer");
+                if (videoComposer != null)
+                    videoComposer.stop(true);
                 break;
             case BOTH_PROCESS:
-                audioComposer.stop();
-                bgmComposer.stop();
-                audioMix.stop();
-                videoComposer.stop();
-                mediaCombine.stop();
+                if (audioComposer != null)
+                    audioComposer.stop(true);
+                if (bgmComposer != null)
+                    bgmComposer.stop(true);
+                if (audioMix != null)
+                    audioMix.stop();
+                if (videoComposer != null)
+                    videoComposer.stop(true);
+                if (mediaCombine != null)
+                    mediaCombine.stop();
                 break;
             default:
                 break;
@@ -157,6 +167,11 @@ public class MediaBind {
     }
 
     public int destory() {
+        audioComposer = null;
+        bgmComposer = null;
+        audioMix = null;
+        videoComposer = null;
+        mediaCombine = null;
         return 0;
     }
 
@@ -168,7 +183,7 @@ public class MediaBind {
      * 初始化 音频合成
      */
     private void initMediaAudioMix(MediaBindInfo bindInfo) {
-        if (bindInfo.getBgm() == null && bindInfo.isMute()) return;
+        if (bindInfo.getBgm() == null || bindInfo.isMute()) return;
         audioMixHandlerThread = new HandlerThread("audioMix");
         audioMixHandlerThread.start();
         audioMixHandler = new Handler(audioMixHandlerThread.getLooper());
@@ -326,6 +341,7 @@ public class MediaBind {
         int outSampleRate = getAudioMinSampleRate();
 
         if (bgmComposer != null && !mediaBindInfo.isMute()) {
+            Log.i(TAG, "startAudio: mix");
             audioComposer.start(outSampleRate, 2, true);
             bgmComposer.start(outSampleRate, 2, true);
             audioMixHandler.post(new Runnable() {
@@ -343,6 +359,7 @@ public class MediaBind {
                                 public void onProgress(int rate) {
                                     if (callback != null) {
                                         callback.onAudioRate((int) (AUDIOMIX_RESAMPLE_RATE + (float) (AUDIOMIX_MERGE_RATE + AUDIOMIX_MIX_RATE) / 100 * rate));
+                                        callback.onAudioType("混音成功");
                                     }
                                 }
                             });
@@ -403,16 +420,17 @@ public class MediaBind {
     private void startCombine() {
         while (true) {
             if (videoAudioOkIndex[0] && videoAudioOkIndex[1]) {
-                String audioOutFilePath= this.audioOutFilePath;
+                String audioOutFilePath = this.audioOutFilePath;
                 if (isAudioMix) {
                     audioOutFilePath = this.audioMixFilePath;
-                } else if (!mediaBindInfo.isMute()){
+                } else if (!mediaBindInfo.isMute()) {
                     audioOutFilePath = this.audioOutFilePath;
-                } else if (mediaBindInfo.getBgm()!=null){
-                    audioOutFilePath=this.bgmOutFilePath;
+                } else if (mediaBindInfo.getBgm() != null) {
+                    audioOutFilePath = this.bgmOutFilePath;
                 }
+                Log.i(TAG, "startCombine: audioOutFilePath:" + audioOutFilePath);
 
-                mediaCombine.open(videoOutFilePath, audioOutFilePath, finalOutFilePath, videoComposer.getDurationUs(), new MediaCombine.CombineVideoListener() {
+                mediaCombine.open(videoOutFilePath, audioOutFilePath, finalOutFilePath, videoComposer.getDurationUs(), new MediaCombine.CombineVideoListener() {//videoComposer.getDurationUs()
                     @Override
                     public void onProgress(int progress) {
                         if (callback != null) {

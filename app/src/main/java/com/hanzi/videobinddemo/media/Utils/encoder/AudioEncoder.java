@@ -101,6 +101,7 @@ public class AudioEncoder {
 //        stopEncoder();
 //        stopThread();
         if (encoder != null) {
+            Log.i(TAG, "stop: test");
             encoder.stop();
             encoder.release();
             encoder=null;
@@ -156,6 +157,7 @@ public class AudioEncoder {
                         Log.d(TAG, "run: INFO_OUTPUT_BUFFERS_CHANGED");
                     } else if (index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                         MediaFormat newFormat = encoder.getOutputFormat();
+                        audioEncoderCallback.setFormat(newFormat);
                         Log.d(TAG, "run: newFormat:" + newFormat.toString());
                     } else if (index < 0) {
                         Log.d(TAG, "run: index:"+index);
@@ -204,5 +206,7 @@ public class AudioEncoder {
         void onOutputBuffer(byte[] bytes, MediaCodec.BufferInfo bufferInfo);
 
         void encodeOver();
+
+        void setFormat(MediaFormat newFormat);
     }
 }

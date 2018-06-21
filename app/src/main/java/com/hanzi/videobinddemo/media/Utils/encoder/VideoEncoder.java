@@ -83,6 +83,10 @@ public class VideoEncoder {
     public int stop() {
 //        stopEncoder();
 //        stopThread();
+        Log.i(TAG, "stop: ");
+        if (inputSurface!=null) {
+            inputSurface.release();
+        }
         if (encoder != null) {
             encoder.stop();
             encoder.release();

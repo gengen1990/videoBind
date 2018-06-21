@@ -113,7 +113,7 @@ public class VideoComposer {
             mMuxerFormat.setInteger("height", mOutHeight);
         }
 
-        composerThread = new HandlerThread("composer");
+        composerThread = new HandlerThread("VideoComposer");
         composerThread.start();
         composerHandler = new Handler(composerThread.getLooper());
 
@@ -136,7 +136,9 @@ public class VideoComposer {
                     startMerge();
                     Log.i(TAG, "run: isOk");
                     videoComposerCallBack.onh264Path();
-                    stop();
+//                    stop(false);
+                    stopMuxer();
+                    stopExtractor();
                 }
 
 
@@ -146,7 +148,7 @@ public class VideoComposer {
 
     private boolean isEditOk() {
         boolean isEditOk = false;
-        while ((!isEditOk) && (!beStop)) {
+        while ((!isEditOk) ) {//&& (!beStop)
             int i = 0;
             for (Integer key : videoEditIndex.keySet()) {
                 if (!videoEditIndex.get(key)) {
@@ -161,14 +163,59 @@ public class VideoComposer {
         return isEditOk;
     }
 
-    public void stop() {
+    public void stop(boolean beStopThread) {
         beStop = true;
-        stopMuxer();
-        stopExtractor();
+//        isResampleStopOk();
+//        if (beStopThread) {
+//            Log.i(TAG, "stop: stopComposerThread ");
+//            stopComposerThread();
+//            Log.i(TAG, "stop: stopComposerThread after");
+//        }
+//        stopMuxer();
+//        stopExtractor();
+
     }
 
+    private void stopComposerThread() {
+        if (composerThread != null) {
+//            composerThread.quitSafely();
+            try {
+                composerThread.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            composerThread = null;
+        }
+        composerThread = null;
+    }
+
+    private void isResampleStopOk() {
+        boolean isResampleStop = false;
+        while (!isResampleStop) {
+            Log.i(TAG, "isResampleStopOk: while");
+            int i = 0;
+            for (Integer key : videoEditIndex.keySet()) {
+                if (!videoEditIndex.get(key)) {
+                    break;
+                }
+                i++;
+            }
+            int j = 0;
+            for (Integer key : videoEditIndex.keySet()) {
+                if (!videoEditIndex.get(key)) {
+                    break;
+                }
+                j++;
+            }
+            if (i == videoEditIndex.size() && j == videoEditIndex.size()) {
+                isResampleStop = true;
+            }
+        }
+    }
+
+
     private void startVideoEdit() {
-        if (beStop && (mMediaExtractors == null || mMediaExtractors.size() == 0)) {
+        if (beStop || (mMediaExtractors == null || mMediaExtractors.size() == 0)) {
             return;
         }
         int index = 0;
@@ -252,7 +299,7 @@ public class VideoComposer {
             if (!decodeInputDone) {
                 long now;
                 if (!beStop) {
-                    now = videoExtractor.getSampleTime()- firstSampleTime-startTimeUs;//- startTimeUs//
+                    now = videoExtractor.getSampleTime() - firstSampleTime - startTimeUs;//- startTimeUs//
                 } else {
                     now = -1;
                 }
@@ -263,15 +310,13 @@ public class VideoComposer {
                     isDecoding = true;
                 }
 
+                if (beStop) {
+                    isDecoding = true;
+                }
+
                 if (isDecoding) {
                     boolean beEndStream = (now >= durationUs || now < 0);
-                    Log.i(TAG, "composer1: sampleTime:" + videoExtractor.getSampleTime());
-                    Log.i(TAG, "composer1: index:" + index);
-                    Log.i(TAG, "composer1: firstSampleTime:" + firstSampleTime);
-                    Log.i(TAG, "composer1: startTimeUs:" + startTimeUs);
-                    Log.i(TAG, "composer1: now:" + now);
-                    Log.i(TAG, "composer1: duraiton:" + durationUs);
-                    Log.d(TAG, "composer1: decodeInputDone ：" + decodeInputDone);
+                    Log.i(TAG, "composer: now:" + now);
                     if (!decoder.decode(beEndStream)) {
                         decodeInputDone = true;
                         isDecoding = false;
@@ -294,6 +339,13 @@ public class VideoComposer {
                 }
             Log.i(TAG, "composer: done:" + done);
 
+        }
+
+        if (encoder!=null) {
+            encoder.stop();
+        }
+        if (decoder!=null) {
+            decoder.stop();
         }
         videoEditIndex.put(index, true);
     }
@@ -361,7 +413,6 @@ public class VideoComposer {
         Object[] key_arr = videoDataHashMap.keySet().toArray();
         Arrays.sort(key_arr);
         for (Object key : key_arr) {
-            Log.i(TAG, "startMerge: key:" + key);
             mergeByteBuffer(videoDataHashMap.get(key));
         }
 
@@ -375,7 +426,6 @@ public class VideoComposer {
         long videoPts = 0;
         while (!byteContainer.isEmpty()) {
             byte[] data = byteContainer.getData();
-            Log.d(TAG, "mergeByteBuffer: length:" + data.length);
             ByteBuffer byteBuffer = ByteBuffer.allocate(data.length);
             MediaCodec.BufferInfo bufferInfo = byteContainer.getBufferInfo();
             Log.d(TAG, "mergeByteBuffer: bufferInfo.presentationTimeUs:" + bufferInfo.presentationTimeUs);
@@ -411,6 +461,7 @@ public class VideoComposer {
     }
 
     private void stopExtractor() {
+        Log.i(TAG, "stopExtractor: ");
         for (VideoExtractor extractor : mMediaExtractors) {
             extractor.release();
         }
@@ -521,8 +572,6 @@ public class VideoComposer {
             for (Integer integer : resampleRateIndex.keySet()) {
                 sum += resampleRateIndex.get(integer);
             }
-            Log.i(TAG, "onOutputBuffer: sum:" + sum);
-            Log.i(TAG, "onOutputBuffer: duration:" + mDuration);
 
             float rate = ((float) sum / mDuration);
             if (rate > 1) {
@@ -542,8 +591,6 @@ public class VideoComposer {
             if (rate > 1) {
                 rate = 1;
             }
-            Log.i(TAG, "noMixMergeProgress: rate:" + rate);
-            Log.i(TAG, "noMixMergeProgress: merge:" + (exRate + RATE * rate));
             videoProgressCallBack.onProgress((int) (exRate + RATE * rate));
         }
     }

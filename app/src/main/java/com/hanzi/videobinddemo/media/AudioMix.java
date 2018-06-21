@@ -54,6 +54,9 @@ public class AudioMix {
 
     private FinishListener finishListener;
 
+    Object lock = new Object();
+    boolean muxStarted = false;
+
     public int open(String[] inPcmPaths, String outAACPath, MediaFormat mediaFormat, int sampleRate, int channelCount, int maxInputSize, long duration) {
         this.outAACPath = outAACPath;
         this.sampleRate = sampleRate;
@@ -73,7 +76,7 @@ public class AudioMix {
         encodeHandlerThread = new HandlerThread("mixEncoder");
         encodeHandlerThread.start();
         encoderHandler = new Handler(encodeHandlerThread.getLooper());
-        mediaFileMuxer = new MediaFileMuxer(outAACPath);
+
         return 0;
     }
 
@@ -86,6 +89,18 @@ public class AudioMix {
 
             @Override
             public void onOutputBuffer(byte[] data, MediaCodec.BufferInfo bufferInfo) {
+
+                if (!muxStarted) {
+                    synchronized (lock) {
+                        if (!muxStarted) {
+                            try {
+                                lock.wait();
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+                }
                 ByteBuffer byteBuffer = ByteBuffer.allocate(data.length);
                 byteBuffer.put(data);
                 byteBuffer.flip();
@@ -109,6 +124,13 @@ public class AudioMix {
                 beStopOver = true;
                 stop();
             }
+
+            @Override
+            public void setFormat(MediaFormat newFormat) {
+                mediaFormat = newFormat;
+                Log.i(TAG, "startMuxer: mediaFormat:" + mediaFormat.toString());
+                startMuxer();
+            }
         });
         audioEncoder.start();
     }
@@ -118,10 +140,18 @@ public class AudioMix {
      * 根据采样率重新设置 format
      */
     private void startMuxer() {
+        Log.i(TAG, "startMuxer: ");
+        mediaFileMuxer = new MediaFileMuxer(outAACPath);
         mOutAudioTrackIndex = mediaFileMuxer.addTrack(mediaFormat);
-        Log.d(TAG, "startMuxer: mediaFormat:" + mediaFormat.toString());
-        Log.d(TAG, "startMuxer: mOutVideoTrackIndex:" + mOutAudioTrackIndex);
-        mediaFileMuxer.start();
+
+        Log.i(TAG, "startMuxer: mOutVideoTrackIndex:" + mOutAudioTrackIndex);
+        synchronized (lock) {
+            if (mOutAudioTrackIndex!=-1 && !muxStarted) {
+                mediaFileMuxer.start();
+                muxStarted = true;
+                lock.notify();
+            }
+        }
     }
 
     private void stopMuxer() {
@@ -139,7 +169,7 @@ public class AudioMix {
 
     public int start() {
         try {
-            startMuxer();
+//            startMuxer();
             String mixPath = PATH + "/1/audioMixWithNoMuxer.aac";
             pcmMix(inPcmFiles, mixPath, 1, 1, sampleRate);
             encoderHandler.post(audioMixEncodeInputRunnable);
