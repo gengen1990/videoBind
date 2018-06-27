@@ -83,7 +83,7 @@ public class AudioDecoder {
         return 0;
     }
 
-    public boolean decode(boolean beEndOfStream) {
+    public boolean decode(long pts,boolean beEndOfStream) {
 
         int index = decoder.dequeueInputBuffer(TIMEOUT_USEC);
 
@@ -103,7 +103,7 @@ public class AudioDecoder {
             long presentationTimeUs = 0;
             if (audioDecodeCallBack != null) {
                 size = audioDecodeCallBack.putInputData(inputBuffer);
-                presentationTimeUs = audioDecodeCallBack.getPresentationTimeUs();
+                presentationTimeUs = pts;//audioDecodeCallBack.getPresentationTimeUs();
             }
 
             if (size >= 0) {

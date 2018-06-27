@@ -108,7 +108,7 @@ public class VideoDecoder {
         return false;
     }
 
-    public boolean decode(boolean beEndOfStream) {
+    public boolean decode(long outPts, boolean beEndOfStream) {
         int index = decoder.dequeueInputBuffer(TIMEOUT_USEC);
 
         mBeEndOfStream = beEndOfStream;
@@ -128,7 +128,7 @@ public class VideoDecoder {
             long presentationTimeUs = 0;
             if (videoDecodeCallBack != null) {
                 size = videoDecodeCallBack.putInputData(inputBuffer);
-                presentationTimeUs = videoDecodeCallBack.getPresentationTimeUs();
+                presentationTimeUs = outPts;
             }
             Log.d(TAG, String.format("decode: inputInfo: size %d presentationTimeUs %d ", size, presentationTimeUs));
 
@@ -203,7 +203,7 @@ public class VideoDecoder {
                         videoDecodeCallBack.decodeOver();
                     return false;
                 }
-                boolean doRender = (outputInfo.size != 0 && outputInfo.presentationTimeUs  > 0);//- mFirstSampleTime mStartTimeUs
+                boolean doRender = (outputInfo.size != 0 && outputInfo.presentationTimeUs > 0);//- mFirstSampleTime mStartTimeUs
                 decoder.releaseOutputBuffer(idx, doRender);
                 Log.d(TAG, "run: doRender:" + doRender);
                 if (doRender) {

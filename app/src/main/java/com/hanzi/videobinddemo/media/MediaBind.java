@@ -6,7 +6,6 @@ import android.os.HandlerThread;
 import android.util.Log;
 
 import com.hanzi.videobinddemo.Constants;
-import com.hanzi.videobinddemo.bean.EffectInfo;
 import com.hanzi.videobinddemo.media.Utils.extractor.AudioExtractor;
 import com.hanzi.videobinddemo.media.Variable.MediaBean;
 import com.hanzi.videobinddemo.media.Variable.MediaBindInfo;
@@ -45,7 +44,6 @@ public class MediaBind {
 
     private List<String> urls = new ArrayList<>();
     private String bgmPath = "";
-    private EffectInfo effectInfo = new EffectInfo();
 
     private VideoComposer videoComposer;
     private AudioComposer bgmComposer, audioComposer;
@@ -163,6 +161,9 @@ public class MediaBind {
             default:
                 break;
         }
+
+        videoAudioOkIndex[0]=false;
+        videoAudioOkIndex[1]=false;
         return 0;
     }
 
@@ -436,6 +437,16 @@ public class MediaBind {
                         if (callback != null) {
                             callback.onCombineRate(progress);
                         }
+                    }
+
+                    @Override
+                    public void onFinish() {
+
+                    }
+
+                    @Override
+                    public void onCancel(int type) {
+
                     }
                 });
 

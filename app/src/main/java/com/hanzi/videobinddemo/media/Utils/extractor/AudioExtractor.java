@@ -50,13 +50,13 @@ public class AudioExtractor extends MediaExtractor {
 
 
     public boolean isNeedToResample(int sampleRate) {
-        this.outSampleRate = sampleRate;
-        Log.d(TAG, String.format("isNeedToResample sampleRate:%d, outSampleRate:%d",this.sampleRate,outSampleRate));
-        if (this.sampleRate!=outSampleRate) {
+//        this.outSampleRate = sampleRate;
+//        Log.d(TAG, String.format("isNeedToResample sampleRate:%d, outSampleRate:%d",this.sampleRate,outSampleRate));
+//        if (this.sampleRate!=outSampleRate) {
         return true;
-        }else {
-            return false;
-        }
+//        }else {
+//            return false;
+//        }
     }
 
     public long getTotalDurationUs() {

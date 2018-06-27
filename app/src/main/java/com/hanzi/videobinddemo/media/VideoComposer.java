@@ -23,7 +23,8 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static android.media.MediaExtractor.SEEK_TO_PREVIOUS_SYNC;
+import static android.media.MediaExtractor.SAMPLE_FLAG_SYNC;
+import static android.media.MediaExtractor.SEEK_TO_CLOSEST_SYNC;
 
 /**
  * Created by gengen on 2018/5/22.
@@ -64,6 +65,8 @@ public class VideoComposer {
     private VideoComposerCallBack videoComposerCallBack;
 
     private HashMap<Integer, ByteContainer> videoDataHashMap = new HashMap<>();
+    private HashMap<Integer, Long> startTimeHashMap = new HashMap<>();
+    private HashMap<Integer, Long> startSynTimeHashMap = new HashMap<>();
 
     private VideoProgressCallBack videoProgressCallBack;
 
@@ -107,11 +110,17 @@ public class VideoComposer {
         }
 
         mMuxerFormat = mMediaExtractors.get(0).getFormat();
-        if (mMuxerFormat != null && mOutHeight != 0 && mOutWidth != 0 && mFrameRate != 0) {
+        if (mFrameRate != 0) {
+            Log.i(TAG, "VideoComposer: muxerFormat setInteger");
             mMuxerFormat.setInteger("frame-rate", mFrameRate);
+        }
+        if (mOutWidth != 0 && mOutHeight != 0) {
             mMuxerFormat.setInteger("width", mOutWidth);
             mMuxerFormat.setInteger("height", mOutHeight);
         }
+        if (mDuration != 0)
+            mMuxerFormat.setLong("durationUs", mDuration);
+        Log.i(TAG, "VideoComposer: muxerFormat:" + mMuxerFormat);
 
         composerThread = new HandlerThread("VideoComposer");
         composerThread.start();
@@ -148,7 +157,7 @@ public class VideoComposer {
 
     private boolean isEditOk() {
         boolean isEditOk = false;
-        while ((!isEditOk) ) {//&& (!beStop)
+        while ((!isEditOk)) {//&& (!beStop)
             int i = 0;
             for (Integer key : videoEditIndex.keySet()) {
                 if (!videoEditIndex.get(key)) {
@@ -234,6 +243,9 @@ public class VideoComposer {
 //                    if (endTimeUs != -1 && endTimeUs < totalDurationUs) {
 //                        totalDurationUs = endTimeUs - startTimeUs;
 //                    }
+                    if (endTimeUs==-1) {
+                        endTimeUs = videoExtractor.getTotalDurationUs();
+                    }
 
                     Log.d(TAG, String.format("startVideoEdit: firstSampleTime:%d, cutDurationUs:%d, startTimeUs:%d, endTimeUs:%d",
                             firstSampleTime, cutDurationUs, startTimeUs, endTimeUs));
@@ -258,14 +270,36 @@ public class VideoComposer {
      * @param endTimeUs
      */
     private void oneVideoEdit(int index, final VideoExtractor videoExtractor, final long firstSampleTime, final long durationUs, final long startTimeUs, long endTimeUs) {
-        videoExtractor.seekTo(firstSampleTime, SEEK_TO_PREVIOUS_SYNC);//+ startTimeUs
+        Log.i(TAG, "composer1: startTimeUs:"+startTimeUs);
+        Log.i(TAG, "composer1: endTimeUs:" + endTimeUs);
+        if ((endTimeUs!=-1 && startTimeUs > endTimeUs) || startTimeUs > videoExtractor.getTotalDurationUs()) {
+            return;
+        }
+
+        videoExtractor.seekTo(firstSampleTime, SEEK_TO_CLOSEST_SYNC);
+        //先求出距离startTime 最近的关键帧 时间
+        long startSynSampleTimeUs = 0;
+
+        while (videoExtractor.getSampleTime() <= startTimeUs) {
+            if (videoExtractor.getSampleFlags() == SAMPLE_FLAG_SYNC) {
+                startSynSampleTimeUs = videoExtractor.getSampleTime();
+            }
+            videoExtractor.advance();
+        }
+        Log.i(TAG, "composer: startSynSampleTime:" + startSynSampleTimeUs);
+        videoExtractor.seekTo(startSynSampleTimeUs, SEEK_TO_CLOSEST_SYNC);
+        startSynTimeHashMap.put(index,startSynSampleTimeUs);
+        startTimeHashMap.put(index,startTimeUs);
+
+
+        //设置 输出的宽高
+        Log.i(TAG, "composer11: startSampleTime:" + videoExtractor.getSampleTime());
         int width = 0, height = 0, frameRate = 0;
         if (mOutWidth == 0) {
             width = videoExtractor.getWidth();
         } else {
             width = mOutWidth;
         }
-
         if (mOutHeight == 0) {
             height = videoExtractor.getHeight();
         } else {
@@ -274,7 +308,6 @@ public class VideoComposer {
 
         frameRate = videoExtractor.getFrameRate();
 
-        Log.i(TAG, String.format("oneVideoEdit: width：%d，height:%d", width, height));
 
         VideoEncoder encoder = new VideoEncoder();
         VideoDecoder decoder = new VideoDecoder();
@@ -283,46 +316,34 @@ public class VideoComposer {
         openDecoder(index, decoder, videoExtractor, encoder, width, height, firstSampleTime, startTimeUs);
         decoder.start(false);
         encoder.start(false);
-        Log.i(TAG, String.format("oneVideoEdit: durationUs:%d,startTimeUs:%d", durationUs, startTimeUs));
 //                inputForDecoder2(videoExtractor, firstSampleTime, durationUs, startTimeUs, decoder);
-        composer(index, videoExtractor, firstSampleTime, durationUs, startTimeUs, decoder, encoder);
-
+        composer(index, videoExtractor, firstSampleTime, endTimeUs, startSynSampleTimeUs, decoder, encoder);
     }
 
     private void composer(int index, VideoExtractor videoExtractor, long firstSampleTime,
-                          long durationUs, long startTimeUs, VideoDecoder decoder, VideoEncoder encoder) {
+                          long endTime, long startSynSampleTime, VideoDecoder decoder, VideoEncoder encoder) {
         boolean done = false;
         boolean decodeInputDone = false;
         boolean decodeOutputDone = false;
-        boolean isDecoding = false;
         while (!done) {
             if (!decodeInputDone) {
-                long now;
+                long outPts;
+
                 if (!beStop) {
-                    now = videoExtractor.getSampleTime() - firstSampleTime - startTimeUs;//- startTimeUs//
+                    outPts = videoExtractor.getSampleTime() - firstSampleTime - startSynSampleTime;//- startTimeUs//
                 } else {
-                    now = -1;
+                    outPts = -1 - firstSampleTime;
                 }
-                //开始判断如果是未开始编码，先将videoExtractor 定位到 now>=0
-                if (!isDecoding && now < 0) {
-                    videoExtractor.advance();
-                } else {
-                    isDecoding = true;
-                }
+                Log.i(TAG, "composer1: endTime:"+endTime);
+                Log.i(TAG, "composer1: startSynSampleTime:"+startSynSampleTime);
 
-                if (beStop) {
-                    isDecoding = true;
-                }
-
-                if (isDecoding) {
-                    boolean beEndStream = (now >= durationUs || now < 0);
-                    Log.i(TAG, "composer: now:" + now);
-                    if (!decoder.decode(beEndStream)) {
-                        decodeInputDone = true;
-                        isDecoding = false;
-                    }
+                boolean beEndStream = (outPts >= endTime - startSynSampleTime || outPts == -1 - firstSampleTime);//test 如果之后出现多了秒数或者 和音频对不上，就需要解决//+ 1000000
+//                    Log.i(TAG, "composer: now:" + now);
+                if (!decoder.decode(outPts, beEndStream)) {
+                    decodeInputDone = true;
                 }
             }
+
 
             if (!decodeOutputDone) {
                 if (!decoder.decodeOutput()) {
@@ -341,10 +362,10 @@ public class VideoComposer {
 
         }
 
-        if (encoder!=null) {
+        if (encoder != null) {
             encoder.stop();
         }
-        if (decoder!=null) {
+        if (decoder != null) {
             decoder.stop();
         }
         videoEditIndex.put(index, true);
@@ -392,12 +413,11 @@ public class VideoComposer {
 //                            }
 //                        }
 //                        mediaFileMuxer.writeSampleData(mOutVideoTrackIndex, byteBuffer, bufferInfo);
-
                     }
 
                     @Override
                     public void encodeOver() {
-                        Log.i(TAG, String.format("encodeOve %d", index));
+                        Log.i(TAG, String.format("encodeOver %d", index));
 
                     }
                 });
@@ -407,32 +427,67 @@ public class VideoComposer {
         if (beStop) {//&& (mMediaExtractors == null || mMediaExtractors.size() == 0)
             return;
         }
-
         startMuxer(mMuxerFormat);
-
         Object[] key_arr = videoDataHashMap.keySet().toArray();
         Arrays.sort(key_arr);
         for (Object key : key_arr) {
-            mergeByteBuffer(videoDataHashMap.get(key));
+            mergeByteBuffer(key, videoDataHashMap.get(key));
         }
 
     }
 
-    private void mergeByteBuffer(ByteContainer byteContainer) {
+    private void mergeByteBuffer(Object key, ByteContainer byteContainer) {
         if (byteContainer == null) {
             return;
         }
+        byte[] startMergeData=null;
+        MediaCodec.BufferInfo startMergeBufferInfo = new MediaCodec.BufferInfo();
+        startMergeBufferInfo.presentationTimeUs = 0;
+        long startSynTime = 0;
 
         long videoPts = 0;
+
+        //求出第一帧的视频数据
+        if (startTimeHashMap.containsKey(key) && startSynTimeHashMap.containsKey(key)) {
+            long mergeStartTime = startTimeHashMap.get(key) - startSynTimeHashMap.get(key);
+            while (startMergeBufferInfo.presentationTimeUs <= mergeStartTime) {
+                MediaCodec.BufferInfo bufferInfo = byteContainer.getBufferInfo();
+                byte[] data = byteContainer.getData();
+                if (bufferInfo.flags == 1) {
+                    startMergeData = data;
+                    startMergeBufferInfo = bufferInfo;
+                }
+            }
+        }
+      if (startMergeData != null) {
+          Log.i(TAG, "mergeByteBuffer: starMergeBufferInfo.flag:" + startMergeBufferInfo.flags);
+          Log.i(TAG, "mergeByteBuffer: starMergeBufferInfo.pts:" + startMergeBufferInfo.presentationTimeUs);
+
+          startSynTime = startMergeBufferInfo.presentationTimeUs;
+          startMergeBufferInfo.presentationTimeUs=0;
+          ByteBuffer byteBuffer = ByteBuffer.allocate(startMergeData.length);
+            byteBuffer.put(startMergeData);
+            byteBuffer.flip();
+            mediaFileMuxer.writeSampleData(mOutVideoTrackIndex, byteBuffer, startMergeBufferInfo);
+            mergeProgress(startMergeBufferInfo.presentationTimeUs);
+        }
+
+        //开始正式把所需要的数据写进文件中
         while (!byteContainer.isEmpty()) {
-            byte[] data = byteContainer.getData();
-            ByteBuffer byteBuffer = ByteBuffer.allocate(data.length);
             MediaCodec.BufferInfo bufferInfo = byteContainer.getBufferInfo();
-            Log.d(TAG, "mergeByteBuffer: bufferInfo.presentationTimeUs:" + bufferInfo.presentationTimeUs);
-            videoPts = bufferInfo.presentationTimeUs;
+            byte[] data = byteContainer.getData();
+
+            videoPts = bufferInfo.presentationTimeUs - startSynTime;
+
+            bufferInfo.presentationTimeUs = ptsOffset + videoPts;
+
+            Log.i(TAG, "mergeByteBuffer: bufferInfo.presentationTimeUs:" + bufferInfo.presentationTimeUs);
+            Log.i(TAG, "mergeByteBuffer: sampleFlag:" + bufferInfo.flags);
+
+            ByteBuffer byteBuffer = ByteBuffer.allocate(data.length);
             byteBuffer.put(data);
             byteBuffer.flip();
-            bufferInfo.presentationTimeUs = ptsOffset + bufferInfo.presentationTimeUs;
+
             mediaFileMuxer.writeSampleData(mOutVideoTrackIndex, byteBuffer, bufferInfo);
             mergeProgress(bufferInfo.presentationTimeUs);
         }
@@ -468,7 +523,7 @@ public class VideoComposer {
     }
 
     private void openDecoder(int index, VideoDecoder decoder, final VideoExtractor videoExtractor,
-                             final VideoEncoder videoEncoder, int width, int height, long firstSampleTime, long startTimeUs) {
+                             final VideoEncoder videoEncoder, int width, int height, final long firstSampleTime, final long startTimeUs) {
         MediaFormat format = videoExtractor.getFormat();
         MediaBean mediaBean = mMediaBeans.get(index);
         decoder.open(mediaBean, mFilter, format, width, height, firstSampleTime, startTimeUs, new VideoDecoder.VideoDecodeCallBack() {
@@ -479,7 +534,7 @@ public class VideoComposer {
 
             @Override
             public long getPresentationTimeUs() {
-                return videoExtractor.getSampleTime();
+                return videoExtractor.getSampleTime() - firstSampleTime - startTimeUs;
             }
 
             @Override
@@ -547,7 +602,7 @@ public class VideoComposer {
                 now = -1;
             }
             boolean beEndStream = (now >= durationUs || now == -1);
-            if (!decoder.decode(beEndStream)) {
+            if (!decoder.decode(now, beEndStream)) {
                 isRunning = false;
             }
         }

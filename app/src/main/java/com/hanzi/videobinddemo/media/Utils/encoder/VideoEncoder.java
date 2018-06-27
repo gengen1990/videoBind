@@ -176,6 +176,7 @@ public class VideoEncoder {
                             info.size=outputInfo.size;
                             info.offset = outputInfo.offset;
                             info.flags=outputInfo.flags;
+
                             if (videoEncoderCallback != null)
                                 videoEncoderCallback.onOutputBuffer(outputData, info);
 

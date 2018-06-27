@@ -29,6 +29,9 @@ public class MediaCombine {
     private Handler videoHandler;
     private Handler isOkHandler;
 
+    public final static int AUDIO_TYPE = 0;
+    public final static int VIDEO_TYPE = 1;
+
     private int videoTrackIndex = 0, audioTrackIndex = 0;
 
     private long mDuration=0;
@@ -85,8 +88,8 @@ public class MediaCombine {
 
         mediaFileMuxer.start();
         Log.d(TAG, "start: ");
-        audioHandler.post(new WriteSampleRunnable(0, audioExtractor, audioTrackIndex));
-        videoHandler.post(new WriteSampleRunnable(1, videoExtractor, videoTrackIndex));
+        audioHandler.post(new WriteSampleRunnable(AUDIO_TYPE, audioExtractor, audioTrackIndex));
+        videoHandler.post(new WriteSampleRunnable(VIDEO_TYPE, videoExtractor, videoTrackIndex));
         isOkHandler.post(new Runnable() {
             @Override
             public void run() {
@@ -97,8 +100,11 @@ public class MediaCombine {
                         mediaFileMuxer.release();
                         audioExtractor.release();
                         videoExtractor.release();
-                        if (combineVideoListener != null)
+                        if (combineVideoListener != null) {
                             combineVideoListener.onProgress(100);
+                            combineVideoListener.onFinish();
+                        }
+                        Log.i(TAG, "start: test onProgress");
                         break;
                     }
                 }
@@ -147,6 +153,13 @@ public class MediaCombine {
             }
             Log.i(TAG, "run: isWriteOk:"+isWriteOK[index]);
             isWriteOK[index] = true;
+            if (beStop) {
+              if (combineVideoListener!=null) {
+                  combineVideoListener.onProgress(100);
+                  combineVideoListener.onCancel(index);
+                      Log.i(TAG, "run: test onProgress");
+              }
+            }
         }
     }
 
@@ -162,11 +175,17 @@ public class MediaCombine {
             }
             Log.i(TAG, "noMixMergeProgress: rate:" + rate);
             Log.i(TAG, "noMixMergeProgress: merge:" + (exRate + RATE * rate));
+            if (combineVideoListener!=null)
             combineVideoListener.onProgress((int) (exRate + RATE * rate));
+            if (exRate+RATE *rate ==100) {
+                Log.i(TAG, "mergeProgress: test onProgress");
+            }
         }
     }
 
     public interface CombineVideoListener {
         public void onProgress(int progress);
+        public void onFinish();
+        public void onCancel(int type);
     }
 }

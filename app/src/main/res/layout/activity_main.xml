@@ -6,85 +6,261 @@
     android:layout_height="match_parent"
     tools:context="com.hanzi.videobinddemo.MainActivity">
 
-    <TextView
-        android:id="@+id/sample_text"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Hello World!"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
     <Button
         android:id="@+id/merger"
-        android:layout_width="match_parent"
+        android:layout_width="100dp"
         android:layout_height="50dp"
         android:layout_marginLeft="20dp"
         android:layout_marginRight="20dp"
         android:layout_marginTop="50dp"
-        android:text="合并"/>
+        android:text="合并" />
 
     <Button
-        android:layout_below="@+id/videoRate"
+        android:id="@+id/destory"
+        android:layout_width="100dp"
+        android:layout_height="50dp"
+        android:layout_toRightOf="@+id/merger"
+        android:layout_marginLeft="20dp"
+        android:layout_marginRight="20dp"
+        android:layout_marginTop="50dp"
+        android:text="销毁" />
+    <Button
         android:id="@+id/stop"
         android:layout_width="match_parent"
         android:layout_height="50dp"
+        android:layout_below="@+id/videoRate"
         android:layout_marginLeft="20dp"
         android:layout_marginRight="20dp"
-        android:layout_marginTop="50dp"
-        android:text="停止"/>
+        android:layout_marginTop="20dp"
+        android:text="停止" />
+
     <TextView
-        android:layout_alignLeft="@+id/merger"
         android:id="@+id/audioType"
-        android:layout_below="@+id/merger"
         android:layout_width="100dp"
-        android:layout_height="50dp"
-        android:text="音频拼接："
-        />
+        android:layout_height="20dp"
+        android:layout_alignLeft="@+id/merger"
+        android:layout_below="@+id/merger"
+        android:text="音频拼接：" />
+
     <TextView
         android:id="@+id/audioRate"
-        android:layout_below="@+id/merger"
         android:layout_width="100dp"
-        android:layout_height="50dp"
+        android:layout_height="20dp"
+        android:layout_below="@+id/merger"
         android:layout_toRightOf="@+id/audioType"
-        android:text="0"
-        />
+        android:text="0" />
 
     <TextView
-        android:layout_alignLeft="@+id/merger"
         android:id="@+id/videoType"
-        android:layout_below="@+id/audioType"
         android:layout_width="100dp"
-        android:layout_height="50dp"
-        android:text="视频拼接："
-        />
+        android:layout_height="20dp"
+        android:layout_alignLeft="@+id/merger"
+        android:layout_below="@+id/audioType"
+        android:text="视频拼接：" />
+
     <TextView
         android:id="@+id/videoRate"
+        android:layout_width="100dp"
+        android:layout_height="20dp"
         android:layout_below="@+id/audioRate"
-        android:layout_width="100dp"
-        android:layout_height="50dp"
         android:layout_toRightOf="@+id/videoType"
-        android:text="0"
-        />
+        android:text="0" />
+
     <TextView
-        android:layout_alignLeft="@+id/merger"
         android:id="@+id/combineType"
-        android:layout_below="@+id/videoType"
         android:layout_width="100dp"
         android:layout_height="50dp"
-        android:text="音视频合并："
-        />
+        android:layout_alignLeft="@+id/merger"
+        android:layout_below="@+id/videoType"
+        android:text="音视频合并：" />
+
     <TextView
         android:id="@+id/combineRate"
-        android:layout_below="@+id/videoRate"
         android:layout_width="100dp"
         android:layout_height="50dp"
+        android:layout_below="@+id/videoRate"
         android:layout_toRightOf="@+id/combineType"
-        android:text="0"
-        />
+        android:text="0" />
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:layout_below="@+id/stop"
+        android:orientation="vertical"
+        >
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="视频 音频选择（可多选）" />
+
+            <RelativeLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <CheckBox
+                    android:id="@+id/cb_video"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    android:text="视频"
+                    android:textColor="@android:color/black" />
+                <CheckBox
+                    android:id="@+id/cb_filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    android:layout_toRightOf="@+id/cb_video"
+                    android:text="滤镜"
+                    android:textColor="@android:color/black" />
+                <CheckBox
+                    android:id="@+id/cb_effect"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    android:layout_toRightOf="@+id/cb_filter"
+                    android:text="贴图"
+                    android:textColor="@android:color/black" />
+
+                <CheckBox
+                    android:id="@+id/cb_audio"
+                    android:layout_below="@+id/cb_video"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="音频"
+                    android:textColor="@android:color/black" />
+
+                <CheckBox
+                    android:id="@+id/cb_bgm"
+                    android:layout_below="@+id/cb_video"
+                    android:layout_toRightOf="@id/cb_audio"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="bgm"
+                    android:textColor="@android:color/black" />
+                <CheckBox
+                    android:id="@+id/cb_origin"
+                    android:layout_below="@+id/cb_video"
+                    android:layout_toRightOf="@id/cb_bgm"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="源音频"
+                    android:textColor="@android:color/black" />
+
+        </RelativeLayout>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="视频源" />
+
+        <RelativeLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="clip_horizontal"
+            android:orientation="vertical">
+
+            <CheckBox
+                android:id="@+id/cb_num1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:text="视频源1"
+                android:textColor="@android:color/black" />
+            <CheckBox
+                android:id="@+id/cb_totalLen1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:layout_toRightOf="@id/cb_num1"
+                android:text="全长"
+                android:textColor="@android:color/black" />
+            <EditText
+                android:id="@+id/et_startTime1"
+                android:layout_width="50dp"
+                android:layout_height="wrap_content"
+                android:background="@drawable/edit_bg"
+                android:maxLines="1"
+                android:paddingBottom="2dp"
+                android:paddingLeft="10dp"
+                android:paddingTop="2dp"
+                android:layout_marginLeft="10dp"
+                android:scrollbars="horizontal"
+                android:text="1"
+                android:layout_toRightOf="@id/cb_totalLen1"
+                 />
+
+            <EditText
+                android:id="@+id/et_endTime1"
+                android:layout_width="50dp"
+                android:layout_height="wrap_content"
+                android:background="@drawable/edit_bg"
+                android:maxLines="1"
+                android:paddingBottom="2dp"
+                android:paddingLeft="10dp"
+                android:paddingTop="2dp"
+                android:layout_marginLeft="10dp"
+                android:scrollbars="horizontal"
+                android:text="10"
+                android:layout_toRightOf="@id/et_startTime1"
+                />
+            <CheckBox
+                android:id="@+id/cb_num2"
+                android:layout_below="@id/cb_num1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="视频源2"
+                android:textColor="@android:color/black" />
+            <CheckBox
+                android:id="@+id/cb_totalLen2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:layout_below="@id/cb_num1"
+                android:layout_toRightOf="@id/cb_num2"
+                android:text="全长"
+                android:textColor="@android:color/black" />
+            <EditText
+                android:id="@+id/et_startTime2"
+                android:layout_width="50dp"
+                android:layout_height="wrap_content"
+                android:background="@drawable/edit_bg"
+                android:maxLines="1"
+                android:paddingBottom="2dp"
+                android:paddingLeft="10dp"
+                android:paddingTop="2dp"
+                android:layout_marginLeft="10dp"
+                android:scrollbars="horizontal"
+                android:text="1"
+                android:layout_toRightOf="@id/cb_totalLen1"
+                android:layout_below="@+id/et_endTime1"
+                android:layout_marginTop="5dp"
+                />
+
+            <EditText
+                android:id="@+id/et_endTime2"
+                android:layout_width="50dp"
+                android:layout_height="wrap_content"
+                android:background="@drawable/edit_bg"
+                android:maxLines="1"
+                android:paddingBottom="2dp"
+                android:paddingLeft="10dp"
+                android:paddingTop="2dp"
+                android:layout_marginLeft="10dp"
+                android:scrollbars="horizontal"
+                android:text="10"
+                android:layout_toRightOf="@id/et_startTime1"
+                android:layout_below="@+id/et_startTime1"
+                android:layout_marginTop="5dp"
+                />
+        </RelativeLayout>
 
 
 
+
+
+    </LinearLayout>
 
 
 </RelativeLayout>
