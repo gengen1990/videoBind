@@ -450,12 +450,15 @@ public class VideoComposer {
         //求出第一帧的视频数据
         if (startTimeHashMap.containsKey(key) && startSynTimeHashMap.containsKey(key)) {
             long mergeStartTime = startTimeHashMap.get(key) - startSynTimeHashMap.get(key);
+            Log.i(TAG, "mergeByteBuffer: mergeStartTime:"+mergeStartTime);
             while (startMergeBufferInfo.presentationTimeUs <= mergeStartTime) {
+
                 MediaCodec.BufferInfo bufferInfo = byteContainer.getBufferInfo();
                 byte[] data = byteContainer.getData();
                 if (bufferInfo.flags == 1) {
                     startMergeData = data;
                     startMergeBufferInfo = bufferInfo;
+                    Log.i(TAG, "mergeByteBuffer: ok:"+startMergeBufferInfo.presentationTimeUs);
                 }
             }
         }
@@ -464,7 +467,7 @@ public class VideoComposer {
           Log.i(TAG, "mergeByteBuffer: starMergeBufferInfo.pts:" + startMergeBufferInfo.presentationTimeUs);
 
           startSynTime = startMergeBufferInfo.presentationTimeUs;
-          startMergeBufferInfo.presentationTimeUs=0;
+          startMergeBufferInfo.presentationTimeUs=ptsOffset;
           ByteBuffer byteBuffer = ByteBuffer.allocate(startMergeData.length);
             byteBuffer.put(startMergeData);
             byteBuffer.flip();

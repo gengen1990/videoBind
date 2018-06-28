@@ -21,20 +21,17 @@ import java.nio.ByteBuffer;
 public class MediaCombine {
     private static final String TAG = MediaCombine.class.getSimpleName();
 
-    private HandlerThread audioThread ;
-    private HandlerThread videoThread ;
-    private HandlerThread isOkThread ;
+    private HandlerThread audioThread;
+    private HandlerThread videoThread;
+    private HandlerThread isOkThread;
 
     private Handler audioHandler;
     private Handler videoHandler;
     private Handler isOkHandler;
 
-    public final static int AUDIO_TYPE = 0;
-    public final static int VIDEO_TYPE = 1;
-
     private int videoTrackIndex = 0, audioTrackIndex = 0;
 
-    private long mDuration=0;
+    private long mDuration = 0;
 
     private MediaFileMuxer mediaFileMuxer;
 
@@ -43,15 +40,17 @@ public class MediaCombine {
 
     private CombineVideoListener combineVideoListener;
 
+    private long maxPts=-1;
+
     private boolean[] isWriteOK = new boolean[]{false, false};
     private boolean beStop = false;
 
-    public boolean open(String videoPath, String audioPath, String outPath,long duration, CombineVideoListener combineVideoListener) {
+    public boolean open(String videoPath, String audioPath, String outPath, long duration, CombineVideoListener combineVideoListener) {
 
         Log.d(TAG, "open: ");
 
-        Log.i(TAG, "open: videoPath:"+videoPath);
-        Log.i(TAG, "open: audioPath:"+audioPath);
+        Log.i(TAG, "open: videoPath:" + videoPath);
+        Log.i(TAG, "open: audioPath:" + audioPath);
 
         videoExtractor = new VideoExtractor(videoPath, 0, -1);
         audioExtractor = new AudioExtractor(audioPath, 0, -1);
@@ -59,18 +58,22 @@ public class MediaCombine {
         MediaFormat videoFormat = videoExtractor.getFormat();
         MediaFormat audioFormat = audioExtractor.getFormat();
 
-        Log.i(TAG, "open: videoFormat:"+videoFormat);
-        Log.i(TAG, "open: audioFormat:"+audioFormat);
+        Log.i(TAG, "open: videoFormat:" + videoFormat);
+        Log.i(TAG, "open: audioFormat:" + audioFormat);
 
         mediaFileMuxer = new MediaFileMuxer(outPath);
 
         videoTrackIndex = mediaFileMuxer.addTrack(videoFormat);
         audioTrackIndex = mediaFileMuxer.addTrack(audioFormat);
 
-        mDuration= duration;
+        if (videoExtractor.getTotalDurationUs()<audioExtractor.getTotalDurationUs()) {
+           maxPts = videoExtractor.getTotalDurationUs();
+        }
 
-        audioThread = new HandlerThread("audio");
-        videoThread = new HandlerThread("video");
+        mDuration = duration;
+
+        audioThread = new HandlerThread("audioCombine");
+        videoThread = new HandlerThread("videoCombine");
         isOkThread = new HandlerThread("isOk");
         audioThread.start();
         videoThread.start();
@@ -88,8 +91,8 @@ public class MediaCombine {
 
         mediaFileMuxer.start();
         Log.d(TAG, "start: ");
-        audioHandler.post(new WriteSampleRunnable(AUDIO_TYPE, audioExtractor, audioTrackIndex));
-        videoHandler.post(new WriteSampleRunnable(VIDEO_TYPE, videoExtractor, videoTrackIndex));
+        audioHandler.post(new WriteSampleRunnable(0, audioExtractor, audioTrackIndex));
+        videoHandler.post(new WriteSampleRunnable(1, videoExtractor, videoTrackIndex));
         isOkHandler.post(new Runnable() {
             @Override
             public void run() {
@@ -100,11 +103,9 @@ public class MediaCombine {
                         mediaFileMuxer.release();
                         audioExtractor.release();
                         videoExtractor.release();
-                        if (combineVideoListener != null) {
+                        if (combineVideoListener != null)
                             combineVideoListener.onProgress(100);
-                            combineVideoListener.onFinish();
-                        }
-                        Log.i(TAG, "start: test onProgress");
+                        combineVideoListener.onFinish();
                         break;
                     }
                 }
@@ -114,6 +115,12 @@ public class MediaCombine {
 
     public void stop() {
         beStop = true;
+        if (audioThread != null)
+            audioThread.quit();
+        if (videoThread != null)
+            videoThread.quit();
+        audioHandler = null;
+        videoHandler = null;
     }
 
     private final class WriteSampleRunnable implements Runnable {
@@ -127,7 +134,7 @@ public class MediaCombine {
             this.index = index;
             this.extractor = extractor;
             this.trackIndex = trackIndex;
-            byteBuffer = ByteBuffer.allocate(500 * 1024);
+            byteBuffer = ByteBuffer.allocate(1000 * 1024);
             bufferInfo = new MediaCodec.BufferInfo();
         }
 
@@ -140,25 +147,37 @@ public class MediaCombine {
                 if (readVideoSampleSize < 0) {
                     break;
                 }
+
+                if (maxPts!=-1 && bufferInfo.presentationTimeUs>maxPts) {
+                    break;
+                }
+
                 bufferInfo.size = readVideoSampleSize;
                 bufferInfo.presentationTimeUs = extractor.getSampleTime();
                 bufferInfo.offset = 0;
                 bufferInfo.flags = android.media.MediaExtractor.SAMPLE_FLAG_SYNC;//extractor.getSampleFlags();
                 mediaFileMuxer.writeSampleData(trackIndex, byteBuffer, bufferInfo);
 
-                if (index==1) {
+                Log.i(TAG, "run: sample:"+bufferInfo.presentationTimeUs+" idx:"+index);
+
+                if (index == 1) {
                     mergeProgress(bufferInfo.presentationTimeUs);
                 }
                 extractor.advance();
             }
-            Log.i(TAG, "run: isWriteOk:"+isWriteOK[index]);
+
+//            if (maxPts==-1) {
+//                maxPts = bufferInfo.presentationTimeUs;
+//            }
+            Log.i(TAG, "run: maxPts:"+maxPts);
+
+            Log.i(TAG, "run: isWriteOk:" + isWriteOK[index]);
             isWriteOK[index] = true;
             if (beStop) {
-              if (combineVideoListener!=null) {
-                  combineVideoListener.onProgress(100);
-                  combineVideoListener.onCancel(index);
-                      Log.i(TAG, "run: test onProgress");
-              }
+                if (combineVideoListener != null) {
+                    combineVideoListener.onProgress(100);
+                    combineVideoListener.onCancel(index);
+                }
             }
         }
     }
@@ -169,23 +188,22 @@ public class MediaCombine {
             RATE = MediaBind.VIDEO_MERGE_RATE;
             exRate = MediaBind.VIDEO_RECODE_RATE;
 
-            float rate = (float)pts / mDuration;
+            float rate = (float) pts / mDuration;
             if (rate > 1) {
                 rate = 1;
             }
             Log.i(TAG, "noMixMergeProgress: rate:" + rate);
             Log.i(TAG, "noMixMergeProgress: merge:" + (exRate + RATE * rate));
-            if (combineVideoListener!=null)
-            combineVideoListener.onProgress((int) (exRate + RATE * rate));
-            if (exRate+RATE *rate ==100) {
-                Log.i(TAG, "mergeProgress: test onProgress");
-            }
+            if (combineVideoListener != null)
+                combineVideoListener.onProgress((int) (exRate + RATE * rate));
         }
     }
 
     public interface CombineVideoListener {
         public void onProgress(int progress);
+
         public void onFinish();
+
         public void onCancel(int type);
     }
 }

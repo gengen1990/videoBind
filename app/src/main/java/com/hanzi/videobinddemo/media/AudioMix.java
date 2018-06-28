@@ -118,7 +118,7 @@ public class AudioMix {
             }
 
             @Override
-            public void encodeOver() {
+            public void encodeOver(boolean increase) {
                 if (finishListener != null)
                     finishListener.onFinish();
                 beStopOver = true;

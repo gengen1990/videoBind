@@ -23,7 +23,14 @@ public class AudioEncoder {
 //    private MediaCodec.BufferInfo outputInfo;
 
     long apts = 0;
-    long offsetPts = 0;
+//    long offsetPts = 0;
+
+    /**
+     * 判断pts 是递增次数多还是递减次数多
+     */
+    int countPtsUp = 0;
+    int countPtsDown = 0;
+
 
     private Thread mOutputThread;
 
@@ -91,9 +98,10 @@ public class AudioEncoder {
             inputBuffer.position(0).limit(chunkPCM.length);
             inputBuffer.put(chunkPCM);
             inputBuffer.flip();
-            long pts = 0;
-//            long pts = 1000000 * mCnt++ / 50;
+//            long pts = 0;
+            long pts =  20* mCnt++;
             Log.i(TAG, "encode: pts:" + pts);
+            Log.i(TAG, "encode: chunkPCM length:"+chunkPCM.length);
             encoder.queueInputBuffer(index, 0, chunkPCM.length, pts, 0);
             inputBuffer.clear();
             audioEncoderCallback.onInputBuffer();
@@ -162,7 +170,8 @@ public class AudioEncoder {
                         Log.d(TAG, "run: INFO_OUTPUT_BUFFERS_CHANGED");
                     } else if (index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                         MediaFormat newFormat = encoder.getOutputFormat();
-                        audioEncoderCallback.setFormat(newFormat);
+                        if (audioEncoderCallback != null)
+                            audioEncoderCallback.setFormat(newFormat);
                         Log.d(TAG, "run: newFormat:" + newFormat.toString());
                     } else if (index < 0) {
                         Log.d(TAG, "run: index:" + index);
@@ -172,24 +181,36 @@ public class AudioEncoder {
                         if (done) {
                             Log.d(TAG, "run: BUFFER_FLAG_END_OF_STREAM:" + done);
                             mRunning = false;
-                            if (audioEncoderCallback != null)
-                                audioEncoderCallback.encodeOver();
+                            if (audioEncoderCallback != null) {
+                                boolean isIncrease = false;
+                                if (countPtsDown >= countPtsUp) {
+                                    isIncrease = false;
+                                } else {
+                                    isIncrease = true;
+                                }
+                                audioEncoderCallback.encodeOver(isIncrease);
+                            }
                         }
 
-                        Log.d(TAG, "run: presentationTimeUs:" + outputInfo.presentationTimeUs);
+                        Log.d(TAG, "run: presentationTimeUs1:" + outputInfo.presentationTimeUs);
                         Log.d(TAG, "run: outputInfo.size:" + outputInfo.size);
 
-                        if (outputInfo.presentationTimeUs >= apts) {
-                            apts = outputInfo.presentationTimeUs;
-                        } else  {
-                            offsetPts += apts;
-                            apts = 0;
-                        }
+//                        if (outputInfo.presentationTimeUs >= apts) {
+//                            apts = outputInfo.presentationTimeUs;
+//                        } else {
+//                            offsetPts += apts;
+//                            apts = 0;
+//                        }
 
-                        outputInfo.presentationTimeUs=outputInfo.presentationTimeUs+offsetPts;
+                        if (apts != 0 && outputInfo.presentationTimeUs >= apts) {
+                            countPtsUp++;
+                        } else {
+                            countPtsDown++;
+                        }
+                        apts = outputInfo.presentationTimeUs;
 
                         if (outputInfo.size != 0 && outputInfo.presentationTimeUs > 0) {
-                            Log.d(TAG, String.format("output: index %d size %d presentationTimeUs:%d", index, outputInfo.size, outputInfo.presentationTimeUs));
+                            Log.d(TAG, String.format("output: index %d size %d presentationTimeUs1:%d", index, outputInfo.size, outputInfo.presentationTimeUs));
                             byte[] data = new byte[outputData.limit()];
                             outputData.get(data);
 
@@ -215,7 +236,7 @@ public class AudioEncoder {
 
         void onOutputBuffer(byte[] bytes, MediaCodec.BufferInfo bufferInfo);
 
-        void encodeOver();
+        void encodeOver(boolean isPtsIncrease);
 
         void setFormat(MediaFormat newFormat);
     }

@@ -36,8 +36,8 @@ public class MainActivity extends AppCompatActivity {
     private EditText et_startTime1, et_startTime2, et_endTime1, et_endTime2;
     private MediaBind mediaBind;
     private static String PATH = Environment.getExternalStorageDirectory().getAbsolutePath();
-    private String finalinputFilePath1 = PATH + "/1/small.mp4";
-    private String finalinputFilePath2 = PATH + "/1/small.mp4";
+    private String finalinputFilePath1 = PATH + "/1/ice.mp4";
+    private String finalinputFilePath2 = PATH + "/1/hei.mp4";
     private String bgmPath = PATH + "/1/Christmas_Story.aac";//Christmas_Story.aac
 
     private int objectEditWidth = 400, objectEditHeight = 200;
