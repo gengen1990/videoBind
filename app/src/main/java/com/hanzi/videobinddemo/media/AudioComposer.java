@@ -320,6 +320,9 @@ public class AudioComposer {
 
     private void mergeByteBuffer(ByteContainer byteContainer) {
 
+        if (byteContainer==null) {
+            return;
+        }
         byte[] chunkAudio;
 
         while (!byteContainer.isEmpty() && !beStop) {

@@ -379,6 +379,14 @@ public class MainActivity extends AppCompatActivity {
                     mediaBindInfo.setMute(true);
                 }
 
+                if (isEffect) {
+                    Log.i(TAG, "run: isEffect");
+                    List<MediaBean.EffectInfo> effectInfos = new ArrayList<>();
+                    MediaBean.EffectInfo effectInfo = addEffectInfoData(drawingModel);
+                    effectInfos.add(effectInfo);
+                    mediaBean2.setEffectInfos(effectInfos);
+                }
+
 
                 mediaBindInfo.setMediaBeans(mediaBeans);
 

@@ -268,9 +268,9 @@ public class VideoDrawer implements GLSurfaceView.Renderer {
                 }
             }
 
-            Bitmap bitmap = BitmapUtils.bitmapMix(context, effectInfos, viewWidth, viewHeight);  //无数据，返回null
+            Bitmap bitmap = BitmapUtils.bitmapMix(context, effectInfos, showWidth, showHeight);  //无数据，返回null
             effectFilter.setBitmap(bitmap);
-            effectFilter.setPosition(0, 0, viewWidth, viewHeight);
+            effectFilter.setPosition(0, 0, showWidth, showHeight);
             effectFilter.setMatrix(OM);
             mGroupFilter.clearAll();
             mGroupFilter.addFilter(effectFilter);
