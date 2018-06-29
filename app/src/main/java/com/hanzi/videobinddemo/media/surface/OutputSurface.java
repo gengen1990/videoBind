@@ -64,22 +64,23 @@ public class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
     private VideoDrawer mDrawer;
     private MediaBean mMediaBean;
     private AFilter mFilter;
+
     /**
      * Creates an OutputSurface using the current EGL context.  Creates a Surface that can be
      * passed to MediaCodec.configure().
      */
-    public OutputSurface(MediaBean mediaBean, AFilter filter) {
-       this.mMediaBean = mediaBean;
-       this.mFilter =filter;
-        setup();
-//        eglSetup(mMediaBean.getVideoWidth(),mMediaBean.getVideoHeight());
+    public OutputSurface(int outWidth, int outHeight, MediaBean mediaBean, AFilter filter) {
+        this.mMediaBean = mediaBean;
+        this.mFilter = filter;
+        setup(outWidth, outHeight);
+//        eglSetup(mMediaBean.getContentWidth(),mMediaBean.getContentHeight());
     }
 
     /**
      * Creates instances of TextureRender and SurfaceTexture, and a Surface associated
      * with the SurfaceTexture.
      */
-    private void setup() {
+    private void setup(int outWidth, int outHeight) {
 //        mTextureRender = new TextureRender(info);
 //        mTextureRender.surfaceCreated();
 
@@ -94,9 +95,9 @@ public class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
                 mDrawer.setFilter(mFilter);
             }
         }
-        Log.i(TAG, "setup: videoWidth:"+mMediaBean.getVideoWidth());
-        Log.i(TAG, "setup: videoHeight:"+mMediaBean.getVideoHeight());
-        mDrawer.onSurfaceChanged(null, mMediaBean.getVideoWidth(), mMediaBean.getVideoHeight());
+        Log.i(TAG, "setup: videoWidth:" + mMediaBean.getContentWidth());
+        Log.i(TAG, "setup: videoHeight:" + mMediaBean.getContentHeight());
+        mDrawer.onVideoChanged(mMediaBean.getContentWidth(), mMediaBean.getContentHeight(), outWidth, outHeight);
 
         // Even if we don't access the SurfaceTexture after the constructor returns, we
         // still need to keep a reference to it.  The Surface doesn't retain a reference
@@ -278,7 +279,6 @@ public class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
 
     /**
      * Draws the data from SurfaceTexture onto the current EGL surface.
-     *
      */
     public void drawImage() {
 //        mTextureRender.drawFrame(mSurfaceTexture);
@@ -333,7 +333,7 @@ public class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
      * @return false on failure
      */
     public boolean swapBuffers() {
-        boolean result =  mEGL.eglSwapBuffers(mEGLDisplay,mEGLSurface);
+        boolean result = mEGL.eglSwapBuffers(mEGLDisplay, mEGLSurface);
         if (!result) {
             Log.i(TAG, "WARNING: swapBuffers() failed");
         }

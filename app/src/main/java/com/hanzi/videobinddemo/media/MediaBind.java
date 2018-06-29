@@ -10,6 +10,7 @@ import com.hanzi.videobinddemo.media.Utils.extractor.AudioExtractor;
 import com.hanzi.videobinddemo.media.Variable.MediaBean;
 import com.hanzi.videobinddemo.media.Variable.MediaBindInfo;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -87,6 +88,13 @@ public class MediaBind {
     }
 
     public int open(MediaBindInfo bindInfo) {
+
+        deleteFile(videoOutFilePath);
+        deleteFile(audioMixFilePath);
+        deleteFile(finalOutFilePath);
+        deleteFile(bgmOutFilePath);
+        deleteFile(audioOutFilePath);
+
         this.mediaBindInfo = bindInfo;
         switch (processStragey) {
             case BOTH_PROCESS:
@@ -110,6 +118,13 @@ public class MediaBind {
         }
 
         return 0;
+    }
+
+    private void deleteFile(String path) {
+        File file=new File(path);
+        if (file.exists()) {
+            file.delete();
+        }
     }
 
     public int start() {

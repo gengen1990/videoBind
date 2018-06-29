@@ -29,5 +29,19 @@
 			"square"  : "766526",
 			"wide"    : "766525"
 		}
+	},
+	{
+		"name"                  : "Star",
+		"curve"                 : false,
+		"blendingType"          : "addition",
+		"blendingOpacity"       : 1,
+		"resourceName"          : "xmas_star",
+		"resourceCount"			: 30,
+		"resourceChunkSize"		: 73744,
+		"filterId"  :
+		{
+			"square"  : "766657",
+			"wide"    : "766658"
+		}
 	}
 ]

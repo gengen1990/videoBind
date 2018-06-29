@@ -22,8 +22,8 @@ public class MediaBean implements Cloneable {
     private long durationUs =-1;
 
     private int videoRate =15;
-    private int videoWidth =0;
-    private int videoHeight =0;
+    private int contentWidth =0;
+    private int contentHeight =0;
 
     private int audioRate = 44100;
     private int channelCount = 2;
@@ -69,20 +69,20 @@ public class MediaBean implements Cloneable {
         this.videoRate = rate;
     }
 
-    public int getVideoWidth() {
-        return videoWidth;
+    public int getContentWidth() {
+        return contentWidth;
     }
 
-    public void setVideoWidth(int videoWidth) {
-        this.videoWidth = videoWidth;
+    public void setContentWidth(int contentWidth) {
+        this.contentWidth = contentWidth;
     }
 
-    public int getVideoHeight() {
-        return videoHeight;
+    public int getContentHeight() {
+        return contentHeight;
     }
 
-    public void setVideoHeight(int videoHeight) {
-        this.videoHeight = videoHeight;
+    public void setContentHeight(int contentHeight) {
+        this.contentHeight = contentHeight;
     }
 
     public int getAudioRate() {

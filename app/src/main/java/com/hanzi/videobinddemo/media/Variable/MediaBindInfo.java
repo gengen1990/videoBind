@@ -25,7 +25,7 @@ public class MediaBindInfo {
         return mOutputWidth;
     }
 
-    public void setmOutputWidth(int mOutputWidth) {
+    public void setOutputWidth(int mOutputWidth) {
         this.mOutputWidth = mOutputWidth;
     }
 
@@ -33,7 +33,7 @@ public class MediaBindInfo {
         return mOutputHeight;
     }
 
-    public void setVideoHeight(int mVideoHeight) {
+    public void setOutputHeight(int mVideoHeight) {
         this.mOutputHeight = mVideoHeight;
     }
 

@@ -45,14 +45,14 @@ public class VideoDecoder {
     private long mStartTimeUs;
 
     public int open(MediaBean mediaBean, AFilter filter, MediaFormat trackFormat,
-                    int width, int height, long firstSampleTime, long startTimeUs, VideoDecodeCallBack videoDecodeCallback) {
+                    int outWidth, int outHeight, long firstSampleTime, long startTimeUs, VideoDecodeCallBack videoDecodeCallback) {
         try {
             decoder = MediaCodec.createDecoderByType(trackFormat.getString(MediaFormat.KEY_MIME));
 
             if (filter != null && filter instanceof BlendingFilter) {
                 mFilter = (AFilter) filter.clone();
             }
-            outputSurface = new OutputSurface(mediaBean, mFilter);
+            outputSurface = new OutputSurface(outWidth,outHeight,mediaBean, mFilter);
 
             decoder.configure(trackFormat, outputSurface.getSurface(), null, 0);
             this.mFirstSampleTime = firstSampleTime;

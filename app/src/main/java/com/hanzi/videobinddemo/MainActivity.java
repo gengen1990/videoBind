@@ -368,7 +368,7 @@ public class MainActivity extends AppCompatActivity {
                     mediaBeans.add(mediaBean2);
                 }
                 if (isFilter) {
-                    AFilter beatlesFilter = FilterLibrary.getInstance().getFilter("Beatles");
+                    AFilter beatlesFilter = FilterLibrary.getInstance().getFilter("Star");
                     mediaBindInfo.setFilter(beatlesFilter);
                 } else {
                     mediaBindInfo.setFilter(new NoFilter(MainActivity.this.getResources()));
@@ -387,6 +387,8 @@ public class MainActivity extends AppCompatActivity {
                     mediaBindInfo.setBgm(new MediaBean(bgmPath, 0));
                 }
 
+                mediaBindInfo.setOutputWidth(960);
+                mediaBindInfo.setOutputHeight(720);
                 mediaBind.open(mediaBindInfo);
                 mediaBind.start();
             }

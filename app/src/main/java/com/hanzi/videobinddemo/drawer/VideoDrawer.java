@@ -196,11 +196,11 @@ public class VideoDrawer implements GLSurfaceView.Renderer {
 
     @Override
     public void onDrawFrame(GL10 gl) {
-        Log.i(TAG, "onDrawFrame: showWidth:"+showWidth);
-        Log.i(TAG, "onDrawFrame: showHeight:"+showHeight);
+        Log.i(TAG, "onDrawFrame: showWidth:" + showWidth);
+        Log.i(TAG, "onDrawFrame: showHeight:" + showHeight);
         ++framePosition;
         bindImage();
-         surfaceTexture.updateTexImage();
+        surfaceTexture.updateTexImage();
         EasyGlUtils.bindFrameTexture(fFrame[0], fTexture[0]);
         GLES20.glViewport(0, 0, showWidth, showHeight);
         mRotationOESFilter.draw();
@@ -239,33 +239,33 @@ public class VideoDrawer implements GLSurfaceView.Renderer {
 
     private void bindImage() {
         if (info != null) {
-                //判断整个视频的第几帧需要添加effect
-            List<MediaBean.EffectInfo> effectInfos= info.getEffectInfos();
-                for (int i = 0; i < effectInfos.size(); i++) {
-                    Log.i(TAG, "bindImage: size:"+effectInfos.size());
-                    MediaBean.EffectInfo effectInfo = effectInfos.get(i);
-                    if (effectInfo.mf == 0) {
-                        effectInfo.mf = (info.getRate() == 0 ? 15 : info.getRate()) * effectInfo.intervalMs / 1000;
-                    }
-                    if (effectInfo.videoFrameTimeList.size() > 0
-                            && framePosition >= (effectInfo.videoFrameTimeList.get(0)* info.getRate())
-                            && framePosition <= effectInfo.videoFrameTimeList.get(effectInfo.videoFrameTimeList.size() - 1)* info.getRate()) {
+            //判断整个视频的第几帧需要添加effect
+            List<MediaBean.EffectInfo> effectInfos = info.getEffectInfos();
+            for (int i = 0; i < effectInfos.size(); i++) {
+                Log.i(TAG, "bindImage: size:" + effectInfos.size());
+                MediaBean.EffectInfo effectInfo = effectInfos.get(i);
+                if (effectInfo.mf == 0) {
+                    effectInfo.mf = (info.getRate() == 0 ? 15 : info.getRate()) * effectInfo.intervalMs / 1000;
+                }
+                if (effectInfo.videoFrameTimeList.size() > 0
+                        && framePosition >= (effectInfo.videoFrameTimeList.get(0) * info.getRate())
+                        && framePosition <= effectInfo.videoFrameTimeList.get(effectInfo.videoFrameTimeList.size() - 1) * info.getRate()) {
 //                        Log.i(TAG, "bindImage: effectInfo.videoFrameTimeList.get(0):"+effectInfo.videoFrameTimeList.get(0));
 //                        Log.i(TAG, "bindImage: effectInfo.videoFrameTimeList.get(effectInfo.videoFrameTimeList.size() - 1):"+effectInfo.videoFrameTimeList.get(effectInfo.videoFrameTimeList.size() - 1));
-                       if (effectInfo.mfCount >= effectInfo.mf) {
+                    if (effectInfo.mfCount >= effectInfo.mf) {
 
-                            if (effectInfo.effectPos == effectInfo.bitmaps.size() - 1) {
-                                effectInfo.effectPos = 0;
-                            } else {
-                                effectInfo.effectPos = effectInfo.effectPos + 1;
-                            }
-                            effectInfo.mfCount = 1;
+                        if (effectInfo.effectPos == effectInfo.bitmaps.size() - 1) {
+                            effectInfo.effectPos = 0;
                         } else {
-                            ++effectInfo.mfCount;
+                            effectInfo.effectPos = effectInfo.effectPos + 1;
                         }
+                        effectInfo.mfCount = 1;
                     } else {
-                        effectInfo.effectPos = -1;
+                        ++effectInfo.mfCount;
                     }
+                } else {
+                    effectInfo.effectPos = -1;
+                }
             }
 
             Bitmap bitmap = BitmapUtils.bitmapMix(context, effectInfos, viewWidth, viewHeight);  //无数据，返回null
@@ -332,6 +332,14 @@ public class VideoDrawer implements GLSurfaceView.Renderer {
         Log.i(TAG, "onVideoChanged: height:" + info.height);
         contentWidth = info.width;
         contentHeight = info.height;
+        onSurfaceChanged(null, viewWidth, viewHeight);
+    }
+
+    public void onVideoChanged(int contentWidth, int contentHeight, int viewWidth, int viewHeight) {
+        Log.i(TAG, "onVideoChanged: contentWidth:" + contentWidth);
+        Log.i(TAG, "onVideoChanged: contentHeight:" + contentHeight);
+        this.contentWidth = contentWidth;
+        this.contentHeight = contentHeight;
         onSurfaceChanged(null, viewWidth, viewHeight);
     }
 
