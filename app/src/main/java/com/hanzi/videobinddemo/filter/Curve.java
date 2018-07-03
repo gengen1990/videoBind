@@ -3,7 +3,7 @@ package com.hanzi.videobinddemo.filter;
 import android.content.res.Resources;
 import android.opengl.GLES20;
 
-import com.hanzi.videobinddemo.model.Point;
+import com.hanzi.videobinddemo.bean.model.Point;
 
 import java.io.IOException;
 import java.io.InputStream;

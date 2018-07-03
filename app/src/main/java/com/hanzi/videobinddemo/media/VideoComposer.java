@@ -13,7 +13,7 @@ import com.hanzi.videobinddemo.media.Utils.MediaFileMuxer;
 import com.hanzi.videobinddemo.media.Utils.decoder.VideoDecoder;
 import com.hanzi.videobinddemo.media.Utils.encoder.VideoEncoder;
 import com.hanzi.videobinddemo.media.Utils.extractor.VideoExtractor;
-import com.hanzi.videobinddemo.media.Variable.MediaBean;
+import com.hanzi.videobinddemo.bean.MediaBean;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;

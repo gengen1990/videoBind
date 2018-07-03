@@ -6,7 +6,7 @@ import android.util.Log;
 
 import com.hanzi.videobinddemo.filter.AFilter;
 import com.hanzi.videobinddemo.filter.BlendingFilter;
-import com.hanzi.videobinddemo.media.Variable.MediaBean;
+import com.hanzi.videobinddemo.bean.MediaBean;
 import com.hanzi.videobinddemo.media.surface.OutputSurface;
 
 import java.io.IOException;

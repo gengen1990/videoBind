@@ -6,8 +6,8 @@ import android.opengl.GLES20;
 import android.os.Environment;
 import android.util.Log;
 
-import com.hanzi.videobinddemo.model.filter.BlendingType;
-import com.hanzi.videobinddemo.model.filter.FilterModel;
+import com.hanzi.videobinddemo.bean.model.filter.BlendingType;
+import com.hanzi.videobinddemo.bean.model.filter.FilterModel;
 import com.hanzi.videobinddemo.utils.EasyGlUtils;
 
 import java.io.ByteArrayInputStream;

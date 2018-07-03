@@ -25,7 +25,7 @@ import com.hanzi.videobinddemo.core.MyApplication;
 import com.hanzi.videobinddemo.drawer.VideoDrawer;
 import com.hanzi.videobinddemo.filter.AFilter;
 import com.hanzi.videobinddemo.filter.BlendingFilter;
-import com.hanzi.videobinddemo.media.Variable.MediaBean;
+import com.hanzi.videobinddemo.bean.MediaBean;
 
 import javax.microedition.khronos.egl.EGL10;
 import javax.microedition.khronos.egl.EGLConfig;

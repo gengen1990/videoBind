@@ -14,7 +14,7 @@ import com.hanzi.videobinddemo.filter.AFilter;
 import com.hanzi.videobinddemo.filter.EffectFilter;
 import com.hanzi.videobinddemo.filter.NoFilter;
 import com.hanzi.videobinddemo.filter.RotationOESFilter;
-import com.hanzi.videobinddemo.media.Variable.MediaBean;
+import com.hanzi.videobinddemo.bean.MediaBean;
 import com.hanzi.videobinddemo.utils.BitmapUtils;
 import com.hanzi.videobinddemo.utils.EasyGlUtils;
 import com.hanzi.videobinddemo.utils.MatrixUtils;

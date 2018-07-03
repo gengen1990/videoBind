@@ -7,8 +7,8 @@ import android.util.Log;
 
 import com.hanzi.videobinddemo.Constants;
 import com.hanzi.videobinddemo.media.Utils.extractor.AudioExtractor;
-import com.hanzi.videobinddemo.media.Variable.MediaBean;
-import com.hanzi.videobinddemo.media.Variable.MediaBindInfo;
+import com.hanzi.videobinddemo.bean.MediaBean;
+import com.hanzi.videobinddemo.bean.MediaBindInfo;
 
 import java.io.File;
 import java.util.ArrayList;

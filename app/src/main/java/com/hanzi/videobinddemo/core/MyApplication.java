@@ -3,8 +3,8 @@ package com.hanzi.videobinddemo.core;
 import android.app.Application;
 import android.content.Context;
 
-import com.hanzi.videobinddemo.model.effect.EffectLibrary;
-import com.hanzi.videobinddemo.model.filter.FilterLibrary;
+import com.hanzi.videobinddemo.bean.model.effect.EffectLibrary;
+import com.hanzi.videobinddemo.bean.model.filter.FilterLibrary;
 
 import java.io.IOException;
 

@@ -8,7 +8,7 @@ import android.graphics.Rect;
 import android.os.Environment;
 import android.util.Log;
 
-import com.hanzi.videobinddemo.media.Variable.MediaBean;
+import com.hanzi.videobinddemo.bean.MediaBean;
 
 import java.io.File;
 import java.io.FileNotFoundException;

@@ -15,7 +15,7 @@ import com.hanzi.videobinddemo.media.Utils.ReSample;
 import com.hanzi.videobinddemo.media.Utils.decoder.AudioDecoder;
 import com.hanzi.videobinddemo.media.Utils.encoder.AudioEncoder;
 import com.hanzi.videobinddemo.media.Utils.extractor.AudioExtractor;
-import com.hanzi.videobinddemo.media.Variable.MediaBean;
+import com.hanzi.videobinddemo.bean.MediaBean;
 
 import java.io.BufferedOutputStream;
 import java.io.File;

@@ -7,7 +7,7 @@ import android.util.DisplayMetrics;
 import android.view.View;
 import android.view.WindowManager;
 
-import com.hanzi.videobinddemo.model.Point;
+import com.hanzi.videobinddemo.bean.model.Point;
 
 import java.util.Collection;
 import java.util.UUID;
