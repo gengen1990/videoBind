@@ -17,6 +17,7 @@ import com.hanzi.videobinddemo.filter.NoFilter;
 import com.hanzi.videobinddemo.media.MediaBind;
 import com.hanzi.videobinddemo.media.Variable.MediaBean;
 import com.hanzi.videobinddemo.media.Variable.MediaBindInfo;
+import com.hanzi.videobinddemo.model.effect.CustomTextDrawingModel;
 import com.hanzi.videobinddemo.model.effect.DrawingModel;
 import com.hanzi.videobinddemo.model.effect.EffectModel;
 import com.hanzi.videobinddemo.model.effect.OverlayEffectDrawingModel;
@@ -30,14 +31,14 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
 
     private final static String TAG = "MainActivity";
-    private Button merge, stop,destory;
+    private Button merge, stop, destory;
     private TextView audioType, audioRate, videoType, videoRate, combineRate;
     private CheckBox cbAudio, cbVideo, cbFilter, cbEffect, cbBgm, cbOrigin, cbNum1, cbNum2, cbTotalLen1, cbTotalLen2;
     private EditText et_startTime1, et_startTime2, et_endTime1, et_endTime2;
     private MediaBind mediaBind;
     private static String PATH = Environment.getExternalStorageDirectory().getAbsolutePath();
     private String finalinputFilePath1 = PATH + "/1/ice.mp4";
-    private String finalinputFilePath2 = PATH + "/1/hei.mp4";
+    private String finalinputFilePath2 = PATH + "/1/sw12.mp4";
     private String bgmPath = PATH + "/1/Christmas_Story.aac";//Christmas_Story.aac
 
     private int objectEditWidth = 400, objectEditHeight = 200;
@@ -65,7 +66,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Example of a call to a native method
         merge = findViewById(R.id.merger);
-        destory =findViewById(R.id.destory);
+        destory = findViewById(R.id.destory);
         stop = findViewById(R.id.stop);
 
         audioType = findViewById(R.id.audioType);
@@ -93,21 +94,33 @@ public class MainActivity extends AppCompatActivity {
 
         initListener();
 
-        isVideo=true;
-        isFilter=true;
-        isEffect=true;
-        isNum1=true;
-        isTotalLen1=true;
-        isTotalLen2=true;
+        initData();
 
         addOverlayEffectDrawingModel("20981");
+    }
+
+    private void initData() {
+        isVideo = cbVideo.isChecked();
+        isAudio = cbAudio.isChecked();
+
+        isFilter = cbFilter.isChecked();
+        isEffect = cbEffect.isChecked();
+
+        isBgm = cbBgm.isChecked();
+        isOrigin = cbOrigin.isChecked();
+
+        isNum1 = cbNum1.isChecked();
+        isNum2 = cbNum2.isChecked();
+
+        isTotalLen1 = cbTotalLen1.isChecked();
+        isTotalLen2 = cbTotalLen2.isChecked();
     }
 
     private void initListener() {
         destory.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mediaBind!=null) {
+                if (mediaBind != null) {
                     mediaBind.destory();
                     mediaBind = null;
                 }
@@ -138,9 +151,9 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         merge.setText("合并");
-                        audioRate.setText(0+"");
-                        videoRate.setText(0+"");
-                        combineRate.setText(0+"");
+                        audioRate.setText(0 + "");
+                        videoRate.setText(0 + "");
+                        combineRate.setText(0 + "");
                     }
                 });
 
@@ -148,16 +161,20 @@ public class MainActivity extends AppCompatActivity {
         });
 
 
-
         cbAudio.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
                     isAudio = true;
+                    if (!isBgm)
+                    setCbOrigin(true);
+
                 } else {
                     isAudio = false;
+                    setCbOrigin(false);
+                    setCbBgm(false);
                 }
-                Log.i(TAG, "onCheckedChanged: isAudio:"+isAudio);
+                Log.i(TAG, "onCheckedChanged: isAudio:" + isAudio);
             }
         });
 
@@ -168,8 +185,10 @@ public class MainActivity extends AppCompatActivity {
                     isVideo = true;
                 } else {
                     isVideo = false;
+                    setCbEffect(false);
+                    setCbFilter(false);
                 }
-                Log.i(TAG, "onCheckedChanged: isVideo:"+isVideo);
+                Log.i(TAG, "onCheckedChanged: isVideo:" + isVideo);
             }
         });
         cbFilter.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -177,6 +196,7 @@ public class MainActivity extends AppCompatActivity {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
                     isFilter = true;
+                    setCbVideo(true);
                 } else {
                     isFilter = false;
                 }
@@ -187,6 +207,7 @@ public class MainActivity extends AppCompatActivity {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
                     isEffect = true;
+                    setCbVideo(true);
                 } else {
                     isEffect = false;
                 }
@@ -197,8 +218,12 @@ public class MainActivity extends AppCompatActivity {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
                     isOrigin = true;
+                    setCbAudio(true);
                 } else {
                     isOrigin = false;
+                    if (!isBgm) {
+                        setCbAudio(false);
+                    }
                 }
             }
         });
@@ -207,8 +232,12 @@ public class MainActivity extends AppCompatActivity {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
                     isBgm = true;
+                    setCbAudio(true);
                 } else {
                     isBgm = false;
+                    if (!isOrigin) {
+                        setCbAudio(false);
+                    }
                 }
             }
         });
@@ -217,8 +246,15 @@ public class MainActivity extends AppCompatActivity {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
                     isNum1 = true;
+                    if (!isNum2 && !isAudio)
+                    setCbVideo(true);
                 } else {
                     isNum1 = false;
+                    if (!isNum2) {
+                        setCbVideo(false);
+                        setCbAudio(false);
+                    }
+                    setTotalLen1(false);
                 }
             }
         });
@@ -227,8 +263,15 @@ public class MainActivity extends AppCompatActivity {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
                     isNum2 = true;
+                    if (!isNum1 && !isAudio)
+                        setCbVideo(true);
                 } else {
                     isNum2 = false;
+                    if (!isNum1) {
+                        setCbVideo(false);
+                        setCbAudio(false);
+                    }
+                    setTotalLen2(false);
                 }
             }
         });
@@ -237,6 +280,7 @@ public class MainActivity extends AppCompatActivity {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
                     isTotalLen1 = true;
+                    setCbNum1(true);
                 } else {
                     isTotalLen1 = false;
                 }
@@ -247,6 +291,7 @@ public class MainActivity extends AppCompatActivity {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
                     isTotalLen2 = true;
+                    setCbNum2(true);
                 } else {
                     isTotalLen2 = false;
                 }
@@ -255,16 +300,66 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    private void setCbVideo(boolean isVideo) {
+        this.isVideo=isVideo;
+        cbVideo.setChecked(isVideo);
+    }
+
+    private void setCbNum1(boolean isNum1) {
+        this.isNum1 = isNum1;
+        cbNum1.setChecked(isNum1);
+    }
+
+    private void setCbNum2(boolean isNum2) {
+        this.isNum2 = isNum2;
+        cbNum2.setChecked(isNum2);
+    }
+
+    private void setCbEffect(boolean isEffect) {
+        this.isEffect = isEffect;
+        cbEffect.setChecked(isEffect);
+    }
+
+    private void setCbFilter(boolean isFilter) {
+        this.isFilter = isFilter;
+        cbFilter.setChecked(isFilter);
+    }
+
+    private void setTotalLen1(boolean isTotalLen) {
+        this.isTotalLen1 = isTotalLen;
+        cbTotalLen1.setChecked(isTotalLen);
+    }
+
+    private void setTotalLen2(boolean isTotalLen) {
+        this.isTotalLen2 = isTotalLen;
+        cbTotalLen2.setChecked(isTotalLen);
+    }
+
+    private void setCbAudio(boolean isAudio) {
+        this.isAudio = isAudio;
+        cbAudio.setChecked(isAudio);
+    }
+
+    private void setCbBgm(boolean isBgm) {
+        this.isBgm = isBgm;
+        cbBgm.setChecked(isBgm);
+    }
+
+    private void setCbOrigin(boolean isOrigin) {
+        this.isOrigin = isOrigin;
+        cbOrigin.setChecked(isOrigin);
+    }
+
     private void startCompose() {
         new Thread(new Runnable() {
             @Override
             public void run() {
                 int processStragey = MediaBind.BOTH_PROCESS;
-                Log.i(TAG, "run: isAudio:"+isAudio);
-                Log.i(TAG, "run: isVideo:"+isVideo);
+                Log.i(TAG, "run: isAudio:" + isAudio);
+                Log.i(TAG, "run: isVideo:" + isVideo);
                 if (isAudio && !isVideo) processStragey = MediaBind.ONLY_AUDIO_PROCESS;
                 if (!isAudio && isVideo) processStragey = MediaBind.ONLY_VIDEO_PROCESS;
-                Log.i(TAG, "run: progressStragey:"+processStragey);
+                Log.i(TAG, "run: progressStragey:" + processStragey);
                 mediaBind = new MediaBind(processStragey);
                 mediaBind.setCallback(new MediaBind.MediaBindCallback() {
                     @Override
@@ -342,13 +437,6 @@ public class MainActivity extends AppCompatActivity {
                     long endTime = Long.parseLong(et_endTime1.getText().toString());
                     mediaBean1.setTimeUs(startTime * 1000000, endTime * 1000000);
                 }
-                if (isEffect) {
-                    Log.i(TAG, "run: isEffect");
-                    List<MediaBean.EffectInfo> effectInfos = new ArrayList<>();
-                    MediaBean.EffectInfo effectInfo = addEffectInfoData(drawingModel);
-                    effectInfos.add(effectInfo);
-                    mediaBean1.setEffectInfos(effectInfos);
-                }
 
                 MediaBean mediaBean2 = new MediaBean(finalinputFilePath2, 0);
                 if (!isTotalLen2) {
@@ -380,13 +468,8 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 if (isEffect) {
-                    Log.i(TAG, "run: isEffect");
-                    List<MediaBean.EffectInfo> effectInfos = new ArrayList<>();
-                    MediaBean.EffectInfo effectInfo = addEffectInfoData(drawingModel);
-                    effectInfos.add(effectInfo);
-                    mediaBean2.setEffectInfos(effectInfos);
+                    setFrame(drawingModel, mediaBeans);
                 }
-
 
                 mediaBindInfo.setMediaBeans(mediaBeans);
 
@@ -395,8 +478,9 @@ public class MainActivity extends AppCompatActivity {
                     mediaBindInfo.setBgm(new MediaBean(bgmPath, 0));
                 }
 
-                mediaBindInfo.setOutputWidth(960);
-                mediaBindInfo.setOutputHeight(720);
+
+//                mediaBindInfo.setOutputWidth(960);
+//                mediaBindInfo.setOutputHeight(720);
                 mediaBind.open(mediaBindInfo);
                 mediaBind.start();
             }
@@ -423,67 +507,163 @@ public class MainActivity extends AppCompatActivity {
                 });
     }
 
-    private MediaBean.EffectInfo addEffectInfoData(DrawingModel drawingModel) {
-        MediaBean.EffectInfo bean = new MediaBean.EffectInfo();
-        if (drawingModel != null) {
+    private void setDrawingModelLayout(DrawingModel drawingModel, MediaBean.EffectInfo bean) {
+        bean.angle = drawingModel.getRotation();
+        if (bean.angle >= 0 && bean.angle <= 90) {
+            bean.x = drawingModel.getLeftBottomX();
+            bean.y = drawingModel.getLeftTopY();
+        } else if (bean.angle < 0 && bean.angle > -90) {
+            bean.x = drawingModel.getLeftTopX();
+            bean.y = drawingModel.getRightTopY();
+        } else if (bean.angle <= -90 && bean.angle > -180) {
+            bean.x = drawingModel.getRightTopX();
+            bean.y = drawingModel.getRightBottomY();
+        } else if (bean.angle > 90 && bean.angle <= 180) {
+            bean.x = drawingModel.getRightBottomX();
+            bean.y = drawingModel.getLeftBottomY();
+        }
+        bean.w = drawingModel.getWidth();
+        bean.h = drawingModel.getHeight();
+
+        float scale = 1;//((float) viewH) / videoH;
+        float videoMarginW = 10;//(viewW - videoW * scale) / 2;//缩放多出的左边距
+        bean.x = (bean.x - videoMarginW) / scale;
+        bean.y = bean.y / scale;
+        bean.w = (int) (bean.w / scale);
+        bean.h = (int) (bean.h / scale);
+
+        bean.scale = drawingModel.getScale();
+    }
+
+    private void setFrame(DrawingModel drawingModel, List<MediaBean> mediaBeans) {
+        long drawingInitialTimeUs = drawingModel.getInitialTimeUs();
+        long drawingEndTimeUs = drawingModel.getInitialTimeUs() + drawingModel.getDurationUs();
+
+        long cutTotalPre = 0;//前面几个视频的总长度
+        for (int i = 0; i < mediaBeans.size(); i++) {
+
+            MediaBean.EffectInfo bean = new MediaBean.EffectInfo();
             bean.effectStartTimeMs = drawingModel.getInitialTimeUs() / 1000;
             bean.effectEndTimeMs = drawingModel.getInitialTimeUs() / 1000 + drawingModel.getDurationUs() / 1000;
             bean.bitmaps.addAll(Arrays.asList(drawingModel.getBitmaps()).subList(0, drawingModel.getBitmapCount()));
             Log.i(TAG, "addEffectInfoData: drawingModel.getBitmapCount():" + drawingModel.getBitmapCount());
-            bean.intervalMs = (int) (drawingModel.getFrameTimeUs() / 1000);
-            bean.id = drawingModel.getDrawingModelId();
-//            bean.x = drawingModel.getLeftTopX();
-//            bean.y = drawingModel.getLeftTopY();
-
-            bean.angle = drawingModel.getRotation();
-            if (bean.angle >= 0 && bean.angle <= 90) {
-                bean.x = drawingModel.getLeftBottomX();
-                bean.y = drawingModel.getLeftTopY();
-            } else if (bean.angle < 0 && bean.angle > -90) {
-                bean.x = drawingModel.getLeftTopX();
-                bean.y = drawingModel.getRightTopY();
-            } else if (bean.angle <= -90 && bean.angle > -180) {
-                bean.x = drawingModel.getRightTopX();
-                bean.y = drawingModel.getRightBottomY();
-            } else if (bean.angle > 90 && bean.angle <= 180) {
-                bean.x = drawingModel.getRightBottomX();
-                bean.y = drawingModel.getLeftBottomY();
+            bean.intervalMs = 0;
+            if (drawingModel instanceof CustomTextDrawingModel) {
+                bean.intervalMs = 1000;
+            } else {
+                bean.intervalMs = (int) (drawingModel.getFrameTimeUs() / 1000);
             }
-            bean.w = drawingModel.getWidth();
-            bean.h = drawingModel.getHeight();
+            bean.id = drawingModel.getDrawingModelId();
+            setDrawingModelLayout(drawingModel, bean);
 
-            //根据视频缩放比例对贴图的位置及大小进行调整
-//            com.google.android.exoplayer2.Format format = binding.videoView.getFormat();
-//            int videoW = format.width;
-//            int videoH = format.height;
-//
-//            int viewW = binding.videoView.getWidth();
-//            int viewH = binding.videoView.getHeight();
 
-            float scale = 1;//((float) viewH) / videoH;
-            float videoMarginW = 10;//(viewW - videoW * scale) / 2;//缩放多出的左边距
-            bean.x = (bean.x - videoMarginW) / scale;
-            bean.y = bean.y / scale;
-            bean.w = (int) (bean.w / scale);
-            bean.h = (int) (bean.h / scale);
+            long duration = mediaBeans.get(i).getDurationUs();
+            long startTimeUs = mediaBeans.get(i).getStartTimeUs();
+            long endTimeUs = mediaBeans.get(i).getEndTimeUs();
+            long cutDurationUs = 0;
 
-            bean.scale = drawingModel.getScale();
-            int frameTime1 = (int) (bean.effectStartTimeMs / 1000);
-            int frameTime2 = (int) (bean.effectEndTimeMs / 1000);
-//            if (bean.effectStartTimeMs == 0) {
-//                frame2 = (int) (bean.effectEndTimeMs);
-//            } else {
-//                frame2 = (int) (frame1 * bean.effectEndTimeMs / );// (int)(bean.effectEndTimeMs* mVideoView.getFrameRate(0));
-//            }
-            bean.videoFrameTimeList.add(frameTime1);
-            bean.videoFrameTimeList.add(frameTime2);
-            Log.d(TAG, "addEffectInfoData: angle:" + bean.angle
-                    + ",x:" + bean.x + ",y:" + bean.y
-                    + ",w:" + bean.w + ",h:" + bean.h
-                    + ",frameTime1:" + frameTime1
-                    + ",frameTime2:" + frameTime2
-                    + ",scale:" + bean.scale);
+            if (endTimeUs == -1) {
+                cutDurationUs = duration - startTimeUs;
+            } else {
+                cutDurationUs = endTimeUs - startTimeUs;
+            }
+
+            Log.i(TAG, "addEffectInfoData: drawingInitialTimeUs:" + drawingInitialTimeUs);
+            Log.i(TAG, "addEffectInfoData: drawingEndTimeUs:" + drawingEndTimeUs);
+            Log.i(TAG, "addEffectInfoData: cutDurationUs:" + cutDurationUs);
+            Log.i(TAG, "addEffectInfoData: cutTotalPre:" + cutTotalPre);
+
+            float frame1 = -1, frame2 = -1;
+            if (drawingInitialTimeUs < cutDurationUs + cutTotalPre && drawingInitialTimeUs >= cutTotalPre) {
+                frame1 = (float) (drawingInitialTimeUs - cutTotalPre) / 1000000;
+            } else if (drawingInitialTimeUs < cutTotalPre && drawingEndTimeUs > cutTotalPre) {
+                frame1 = 0;
+            }
+
+            if (drawingEndTimeUs > cutTotalPre + cutDurationUs && drawingInitialTimeUs < cutTotalPre + cutDurationUs) {
+                frame2 = (float) cutDurationUs / 1000000;
+            } else if (drawingEndTimeUs < cutTotalPre + cutDurationUs && drawingEndTimeUs >= cutTotalPre) {
+                frame2 = (float) (drawingEndTimeUs - cutTotalPre) / 1000000;
+            }
+
+            Log.i(TAG, "addEffectInfoData: frame1:" + frame1);
+            Log.i(TAG, "addEffectInfoData: frame2:" + frame2);
+
+            if (frame1 != -1 && frame2 != -1 && frame1 != frame2) {
+                bean.videoFrameTimeSList.clear();
+                bean.videoFrameTimeSList.add(frame1);
+                bean.videoFrameTimeSList.add(frame2);
+                mediaBeans.get(i).getEffectInfos().add(bean);
+            }
+
+            cutTotalPre += cutDurationUs;
+//            bean.videoFrameTimeSList.clear();
         }
-        return bean;
+
     }
+
+
+//    private MediaBean.EffectInfo addEffectInfoData(DrawingModel drawingModel) {
+//        MediaBean.EffectInfo bean = new MediaBean.EffectInfo();
+//        if (drawingModel != null) {
+//            bean.effectStartTimeMs = drawingModel.getInitialTimeUs() / 1000;
+//            bean.effectEndTimeMs = drawingModel.getInitialTimeUs() / 1000 + drawingModel.getDurationUs() / 1000;
+//            bean.bitmaps.addAll(Arrays.asList(drawingModel.getBitmaps()).subList(0, drawingModel.getBitmapCount()));
+//            Log.i(TAG, "addEffectInfoData: drawingModel.getBitmapCount():" + drawingModel.getBitmapCount());
+//            bean.intervalMs = (int) (drawingModel.getFrameTimeUs() / 1000);
+//            bean.id = drawingModel.getDrawingModelId();
+////            bean.x = drawingModel.getLeftTopX();
+////            bean.y = drawingModel.getLeftTopY();
+//
+//            bean.angle = drawingModel.getRotation();
+//            if (bean.angle >= 0 && bean.angle <= 90) {
+//                bean.x = drawingModel.getLeftBottomX();
+//                bean.y = drawingModel.getLeftTopY();
+//            } else if (bean.angle < 0 && bean.angle > -90) {
+//                bean.x = drawingModel.getLeftTopX();
+//                bean.y = drawingModel.getRightTopY();
+//            } else if (bean.angle <= -90 && bean.angle > -180) {
+//                bean.x = drawingModel.getRightTopX();
+//                bean.y = drawingModel.getRightBottomY();
+//            } else if (bean.angle > 90 && bean.angle <= 180) {
+//                bean.x = drawingModel.getRightBottomX();
+//                bean.y = drawingModel.getLeftBottomY();
+//            }
+//            bean.w = drawingModel.getWidth();
+//            bean.h = drawingModel.getHeight();
+//
+//            //根据视频缩放比例对贴图的位置及大小进行调整
+////            com.google.android.exoplayer2.Format format = binding.videoView.getFormat();
+////            int videoW = format.width;
+////            int videoH = format.height;
+////
+////            int viewW = binding.videoView.getWidth();
+////            int viewH = binding.videoView.getHeight();
+//
+//            float scale = 1;//((float) viewH) / videoH;
+//            float videoMarginW = 10;//(viewW - videoW * scale) / 2;//缩放多出的左边距
+//            bean.x = (bean.x - videoMarginW) / scale;
+//            bean.y = bean.y / scale;
+//            bean.w = (int) (bean.w / scale);
+//            bean.h = (int) (bean.h / scale);
+//
+//            bean.scale = drawingModel.getScale();
+//            int frameTime1 = (int) (bean.effectStartTimeMs / 1000);
+//            int frameTime2 = (int) (bean.effectEndTimeMs / 1000);
+////            if (bean.effectStartTimeMs == 0) {
+////                frame2 = (int) (bean.effectEndTimeMs);
+////            } else {
+////                frame2 = (int) (frame1 * bean.effectEndTimeMs / );// (int)(bean.effectEndTimeMs* mVideoView.getFrameRate(0));
+////            }
+//            bean.videoFrameTimeSList.add(frameTime1);
+//            bean.videoFrameTimeSList.add(frameTime2);
+//            Log.d(TAG, "addEffectInfoData: angle:" + bean.angle
+//                    + ",x:" + bean.x + ",y:" + bean.y
+//                    + ",w:" + bean.w + ",h:" + bean.h
+//                    + ",frameTime1:" + frameTime1
+//                    + ",frameTime2:" + frameTime2
+//                    + ",scale:" + bean.scale);
+//        }
+//        return bean;
+//    }
 }
