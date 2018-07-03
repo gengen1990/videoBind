@@ -28,6 +28,8 @@ public class MediaBean implements Cloneable {
     private int audioRate = 44100;
     private int channelCount = 2;
 
+    private float preTimeS = 0;
+
     private List<EffectInfo> effectInfos=new ArrayList<>();
 
     public MediaBean(String url, int type) {
@@ -130,7 +132,20 @@ public class MediaBean implements Cloneable {
         this.type = type;
     }
 
-    public static class EffectInfo {
+    public float getPreTimeS() {
+        return preTimeS;
+    }
+
+    public void setPreTimeS(float timeS) {
+        preTimeS = timeS;
+    }
+
+    public static class EffectInfo implements Cloneable {
+
+        @Override
+        public Object clone() throws CloneNotSupportedException {
+            return super.clone();
+        }
 
         @Override
         public String toString() {
@@ -147,7 +162,7 @@ public class MediaBean implements Cloneable {
                     ", h=" + h +
                     ", effectPos=" + effectPos +
                     ", videoLastTime=" + videoLastTime +
-                    ", videoFrameTimeList=" + videoFrameTimeList +
+                    ", videoFrameTimeSList=" + videoFrameTimeSList +
                     '}';
         }
 
@@ -176,12 +191,12 @@ public class MediaBean implements Cloneable {
         //       ===================================
         public int effectPos = -1;        //在某个时刻 ，effect 在第几张图片 -1代表无效果
 
-        public int mf = 0;//mf表示要多久才切换一次effect的bitmap
+        public int mOneEffectRate = 0;//mf表示要多久才切换一次effect的bitmap
 
-        public int mfCount;//表示停留在第effectPos张图片已经有多少次
+        public int mOneEffectCount;//表示停留在第effectPos张图片已经有多少次
 
         public int videoLastTime = 0;   //记录上一张时间
 
-        public List<Integer> videoFrameTimeList = new ArrayList<>();  //视频 时间需要加Effect特效
+        public List<Float> videoFrameTimeSList = new ArrayList<>();  //视频 时间需要加Effect特效
     }
 }

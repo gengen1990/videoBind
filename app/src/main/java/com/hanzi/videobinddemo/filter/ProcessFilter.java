@@ -60,7 +60,9 @@ public class ProcessFilter extends AFilter {
         mFilter.setTextureId(getTextureId());
         mFilter.draw();
         if (mFilter instanceof BlendingFilter) {
-            ((BlendingFilter) mFilter).updateFramePosition(position);
+            float timeMs =  (float) position/((BlendingFilter) mFilter).getVideoRate()*1000;
+
+            ((BlendingFilter) mFilter).updateFramePosition(timeMs);
         }
         EasyGlUtils.unBindFrameBuffer();
         if (b) {
@@ -71,6 +73,7 @@ public class ProcessFilter extends AFilter {
     public void setFramePosition(int n) {
         position = n;
     }
+
 
     @Override
     protected void onSizeChanged(int width, int height) {
@@ -109,6 +112,12 @@ public class ProcessFilter extends AFilter {
         GLES20.glDeleteRenderbuffers(1, fRender, 0);
         GLES20.glDeleteFramebuffers(1, fFrame, 0);
         GLES20.glDeleteTextures(1, fTexture, 0);
+    }
+
+    public void setVideoRate(int rate) {
+        if (mFilter instanceof BlendingFilter) {
+            ((BlendingFilter) mFilter).setVideoRate(rate);
+        }
     }
 
 }

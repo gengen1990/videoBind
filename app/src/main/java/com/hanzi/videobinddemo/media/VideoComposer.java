@@ -296,6 +296,10 @@ public class VideoComposer {
         startSynTimeHashMap.put(index, startSynSampleTimeUs);
         startTimeHashMap.put(index, startTimeUs);
 
+        if (mMediaBeans!=null) {
+            mMediaBeans.get(index).setPreTimeS(((float)(startTimeUs - startSynSampleTimeUs))/1000000);
+            Log.i(TAG, "oneVideoEdit: setPreTimeS:"+(startTimeUs-startSynSampleTimeUs));
+        }
 
         //设置 输出的宽高
         Log.i(TAG, "composer11: startSampleTime:" + videoExtractor.getSampleTime());

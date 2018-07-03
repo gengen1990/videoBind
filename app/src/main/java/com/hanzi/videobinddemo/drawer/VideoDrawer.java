@@ -208,7 +208,10 @@ public class VideoDrawer implements GLSurfaceView.Renderer {
         mGroupFilter.setTextureId(fTexture[0]);
         mGroupFilter.draw();
         mProcessFilter.setTextureId(mGroupFilter.getOutputTexture());
+        int rate =info.getRate()==0?15:info.getRate();
+        ((ProcessFilter) mProcessFilter).setVideoRate(rate);
         ((ProcessFilter) mProcessFilter).setFramePosition(framePosition);
+
         mProcessFilter.draw();
 
         GLES20.glViewport((viewWidth - showWidth) / 2, (viewHeight - showHeight) / 2, showWidth, showHeight);
@@ -239,33 +242,48 @@ public class VideoDrawer implements GLSurfaceView.Renderer {
 
     private void bindImage() {
         if (info != null) {
-            //判断整个视频的第几帧需要添加effect
-            List<MediaBean.EffectInfo> effectInfos = info.getEffectInfos();
-            for (int i = 0; i < effectInfos.size(); i++) {
-                Log.i(TAG, "bindImage: size:" + effectInfos.size());
-                MediaBean.EffectInfo effectInfo = effectInfos.get(i);
-                if (effectInfo.mf == 0) {
-                    effectInfo.mf = (info.getRate() == 0 ? 15 : info.getRate()) * effectInfo.intervalMs / 1000;
-                }
-                if (effectInfo.videoFrameTimeList.size() > 0
-                        && framePosition >= (effectInfo.videoFrameTimeList.get(0) * info.getRate())
-                        && framePosition <= effectInfo.videoFrameTimeList.get(effectInfo.videoFrameTimeList.size() - 1) * info.getRate()) {
-//                        Log.i(TAG, "bindImage: effectInfo.videoFrameTimeList.get(0):"+effectInfo.videoFrameTimeList.get(0));
-//                        Log.i(TAG, "bindImage: effectInfo.videoFrameTimeList.get(effectInfo.videoFrameTimeList.size() - 1):"+effectInfo.videoFrameTimeList.get(effectInfo.videoFrameTimeList.size() - 1));
-                    if (effectInfo.mfCount >= effectInfo.mf) {
-
-                        if (effectInfo.effectPos == effectInfo.bitmaps.size() - 1) {
-                            effectInfo.effectPos = 0;
-                        } else {
-                            effectInfo.effectPos = effectInfo.effectPos + 1;
-                        }
-                        effectInfo.mfCount = 1;
-                    } else {
-                        ++effectInfo.mfCount;
+                //判断整个视频的第几帧需要添加effect
+            List<MediaBean.EffectInfo> effectInfos= info.getEffectInfos();
+                for (int i = 0; i < effectInfos.size(); i++) {
+                    MediaBean.EffectInfo effectInfo = effectInfos.get(i);
+                    if (effectInfo.mOneEffectRate == 0) {
+                        effectInfo.mOneEffectRate = (info.getRate() == 0 ? 15 : info.getRate()) * effectInfo.intervalMs / 1000;
                     }
-                } else {
-                    effectInfo.effectPos = -1;
-                }
+
+                    int framStart= (int) ((effectInfo.videoFrameTimeSList.get(0)+info.getPreTimeS())*info.getRate());
+                    int frameEnd = (int) ((effectInfo.videoFrameTimeSList.get(effectInfo.videoFrameTimeSList.size() - 1)+info.getPreTimeS())* info.getRate());
+
+//                    Log.i(TAG, "bindImage: url:"+info.getUrl());
+                    Log.i(TAG, "bindImage: effectInfo.intervalMs:"+effectInfo.intervalMs);
+                    Log.i(TAG, "bindImage: size:"+effectInfos.size());
+                    Log.i(TAG, "bindImage: rate:"+info.getRate());
+                    Log.i(TAG, "bindImage: frameStart:"+framStart);
+                    Log.i(TAG, "bindImage: frameEnd:"+frameEnd);
+                    Log.i(TAG, "bindImage: framePosition:"+framePosition);
+
+
+                    if (effectInfo.videoFrameTimeSList.size() > 0
+                            && framePosition >= framStart
+                            && framePosition <=frameEnd) {
+                        Log.i(TAG, "bindImage: effectInfo.mOneEffectCount:"+effectInfo.mOneEffectCount);
+                        Log.i(TAG, "bindImage: effectInfo.mOneEffectRate:"+effectInfo.mOneEffectRate);
+
+                        if (effectInfo.mOneEffectCount >= effectInfo.mOneEffectRate) {
+
+                            if (effectInfo.effectPos == effectInfo.bitmaps.size() - 1) {
+                                effectInfo.effectPos = 0;
+                            } else {
+                                effectInfo.effectPos = effectInfo.effectPos + 1;
+                            }
+                            effectInfo.mOneEffectCount = 1;
+                        } else {
+                            ++effectInfo.mOneEffectCount;
+                        }
+                    } else {
+                        effectInfo.effectPos = -1;
+                    }
+
+                    Log.i(TAG, "bindImage: effectPos:"+effectInfo.effectPos);
             }
 
             Bitmap bitmap = BitmapUtils.bitmapMix(context, effectInfos, showWidth, showHeight);  //无数据，返回null

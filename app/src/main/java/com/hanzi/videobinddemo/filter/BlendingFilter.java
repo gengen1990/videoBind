@@ -3,6 +3,7 @@ package com.hanzi.videobinddemo.filter;
 import android.content.res.Resources;
 import android.opengl.ETC1Util;
 import android.opengl.GLES20;
+import android.os.Environment;
 import android.util.Log;
 
 import com.hanzi.videobinddemo.model.filter.BlendingType;
@@ -10,7 +11,7 @@ import com.hanzi.videobinddemo.model.filter.FilterModel;
 import com.hanzi.videobinddemo.utils.EasyGlUtils;
 
 import java.io.ByteArrayInputStream;
-import java.io.InputStream;
+import java.io.FileInputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -22,7 +23,7 @@ import java.nio.FloatBuffer;
 public class BlendingFilter extends AFilter {
 
     private static final String TAG = BlendingFilter.class.getSimpleName();
-
+    public static final String PATH_VIDEO_MATERIAL = Environment.getExternalStorageDirectory() + "/aladihai/";
     FilterModel filterModel;
     private int _uSFFilterHandler;
     private int _blendingOpacity;
@@ -47,6 +48,7 @@ public class BlendingFilter extends AFilter {
     private float uScaleFactFilter_y, uScaleFactFilter_x;
 
     private boolean isBinding = false;
+    private int videoRate;
 
     public BlendingFilter(Resources mRes) {
         super(mRes);
@@ -165,10 +167,13 @@ public class BlendingFilter extends AFilter {
         this.isBinding = isBinding;
     }
 
-    protected void updateFramePosition(int n) {
+    protected void updateFramePosition(float n) {
         if (n >= 0L) {
-            final float n2 = texNum * ((n / 6) / (texNum / 3.0f));//1000.0f *
-            final int n3 = (int) n2;
+            final float n2 = this.texNum * (n / (1000.0f * this.texNum / 3.0f));
+            final int n3 = (int)n2;
+//            Log.i(TAG, "updateFramePosition: n:"+n);
+//            Log.i(TAG, "updateFramePosition: n2:"+n2);
+//            Log.i(TAG, "updateFramePosition: n3:"+n3);
             GLES20.glUniform1f(_mixingOpacity, n2 % 1.0f);
             GLES20.glUniform1f(_blendingOpacity, filterModel.blendingOpacity);
             GLES20.glActiveTexture(GLES20.GL_TEXTURE2);
@@ -188,12 +193,21 @@ public class BlendingFilter extends AFilter {
         onDraw();
     }
 
+    public int getVideoRate() {
+        return videoRate;
+    }
+
+    public void setVideoRate(int videoRate) {
+        this.videoRate = videoRate;
+    }
+
     protected void loadTexture() {
         if (textures == null ) {
             try {
                 textures = new int[texNum];
                 GLES20.glGenTextures(texNum, textures, 0);
-                InputStream inputStream = mRes.getAssets().open(filterModel.getETCPath());
+                //InputStream inputStream = mRes.getAssets().open(filterModel.getETCPath());
+                FileInputStream inputStream = new FileInputStream(PATH_VIDEO_MATERIAL+filterModel.getETCPath());
                 for (int i = 0; i < texNum; i++) {
                     byte[] bytes = new byte[filterModel.resourceChunkSize];
                     if (inputStream.read(bytes) == -1) {
@@ -210,6 +224,7 @@ public class BlendingFilter extends AFilter {
                 }
                 inputStream.close();
             } catch (Exception e) {
+                if (onFilterListener!=null)
                 onFilterListener.onLoadBlendingFilterError(filterModel);
                 e.printStackTrace();
                 return;
